@@ -11,7 +11,7 @@
     </p>
     <p class="notice">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      <span><strong>Phase 4 active.</strong> Face detection, person recognition, and facial expression classification are running locally using OpenCV YuNet, SFace, and MobileFaceNet models. Spoken announcements will follow in Phase 5.</span>
+      <span><strong>Phase 5 active.</strong> Live face recognition and spoken announcements are running locally. Use the controls below to start camera recognition, mute voice, adjust speech rate, or repeat announcements.</span>
     </p>
   </section>
 
@@ -100,10 +100,49 @@
         <p class="hint">Start camera and select <strong>Recognize Face</strong> or enable continuous mode. SFace cosine threshold: &ge; 0.363.</p>
       </section>
 
-      <section class="card" aria-labelledby="speech-heading">
-        <h2 id="speech-heading">Speech feedback</h2>
-        <p class="speech-status"><strong>Not available yet.</strong></p>
-        <p class="hint">Spoken announcements will be added in a later phase. The app does not speak or listen today.</p>
+      <section class="card speech-card" aria-labelledby="speech-heading">
+        <div class="speech-card__header">
+          <h2 id="speech-heading">Speech feedback</h2>
+          <span id="speech-status-badge" class="badge badge--success">Voice active</span>
+        </div>
+
+        <div class="speech-announcement-box" aria-live="off">
+          <span class="speech-announcement-box__label">Latest spoken message:</span>
+          <p id="latest-announcement-text" class="speech-announcement-box__text">None yet</p>
+        </div>
+
+        <div class="speech-actions">
+          <button type="button" class="btn btn--small" id="mute-speech-btn" aria-pressed="false">
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" fill="currentColor"/></svg>
+            <span id="mute-btn-text">Mute voice</span>
+          </button>
+          <button type="button" class="btn btn--small btn--ghost" id="repeat-speech-btn" disabled>
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" fill="currentColor"/></svg>
+            <span>Repeat announcement</span>
+          </button>
+        </div>
+
+        <div class="speech-settings">
+          <div class="speech-setting-group">
+            <label for="speech-rate-select">Speech speed:</label>
+            <select id="speech-rate-select" class="form-select form-select--small">
+              <option value="0.8">Slower (0.8x)</option>
+              <option value="1.0" selected>Normal (1.0x)</option>
+              <option value="1.2">Faster (1.2x)</option>
+              <option value="1.5">Very fast (1.5x)</option>
+            </select>
+          </div>
+          <div class="speech-setting-group">
+            <label for="speech-cooldown-select">Repeat cooldown:</label>
+            <select id="speech-cooldown-select" class="form-select form-select--small">
+              <option value="4000">4 seconds</option>
+              <option value="6000" selected>6 seconds</option>
+              <option value="10000">10 seconds</option>
+            </select>
+          </div>
+        </div>
+
+        <p class="hint">Spoken announcements describe visible facial cues as probabilistic estimates, not definitive emotional states.</p>
       </section>
     </div>
   </div>

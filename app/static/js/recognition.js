@@ -1,10 +1,12 @@
 /**
- * recognition.js - Frontend client for face detection and identity recognition.
+ * recognition.js - Frontend client for live face detection, person recognition,
+ * facial expression classification, and accessible voice feedback (Phase 5).
  * Strictly adheres to CSP: self-hosted, no inline handlers, full keyboard & screen-reader support.
  */
 (function () {
   'use strict';
 
+  // Camera & canvas elements
   const video = document.getElementById('camera-video');
   const overlay = document.getElementById('camera-overlay');
   const cameraStatus = document.getElementById('camera-status');
@@ -12,6 +14,7 @@
   const liveToggle = document.getElementById('live-recognition-toggle');
   const uploadInput = document.getElementById('upload-image-input');
 
+  // Recognition Results panel elements
   const resultPerson = document.getElementById('result-person');
   const resultSimilarity = document.getElementById('result-similarity');
   const resultFacesCount = document.getElementById('result-faces-count');
@@ -19,15 +22,41 @@
   const resultExpression = document.getElementById('result-expression');
   const announcement = document.getElementById('recognition-announcement');
 
+  // Voice Feedback elements (Phase 5)
+  const speechStatusBadge = document.getElementById('speech-status-badge');
+  const latestAnnouncementText = document.getElementById('latest-announcement-text');
+  const muteBtn = document.getElementById('mute-speech-btn');
+  const muteBtnText = document.getElementById('mute-btn-text');
+  const repeatBtn = document.getElementById('repeat-speech-btn');
+  const speechRateSelect = document.getElementById('speech-rate-select');
+  const speechCooldownSelect = document.getElementById('speech-cooldown-select');
+
   if (!recognizeBtn || !overlay) {
     return;
   }
 
+  // State variables
   let isProcessing = false;
   let liveInterval = null;
+  let isSpeechMuted = false;
+  let lastSpokenMessage = '';
+  let lastSpokenTime = 0;
+  let previousPeopleInScene = [];
+  const hasSupportedSpeech = 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance !== 'undefined';
+
   const offscreenCanvas = document.createElement('canvas');
   const offscreenCtx = offscreenCanvas.getContext('2d');
   const overlayCtx = overlay.getContext('2d');
+
+  // Initial speech synthesis check
+  if (!hasSupportedSpeech) {
+    if (speechStatusBadge) {
+      speechStatusBadge.className = 'badge badge--warning';
+      speechStatusBadge.textContent = 'Voice unsupported';
+    }
+    if (muteBtn) muteBtn.disabled = true;
+    if (repeatBtn) repeatBtn.disabled = true;
+  }
 
   function clearOverlay() {
     overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
@@ -41,6 +70,7 @@
     if (resultLatency) resultLatency.textContent = '—';
     if (resultExpression) resultExpression.innerHTML = '<span class="badge badge--neutral">—</span>';
     if (announcement) announcement.textContent = 'Ready for face recognition.';
+    previousPeopleInScene = [];
   }
 
   function setCameraControlsState(isOn) {
@@ -53,12 +83,13 @@
       stopLiveRecognition();
       resetResults();
       overlay.hidden = true;
+      cancelSpeech();
     } else {
       overlay.hidden = false;
     }
   }
 
-  // Observe camera status changes
+  // Observe camera status changes from camera.js
   if (cameraStatus) {
     const observer = new MutationObserver(function (mutations) {
       mutations.forEach(function (mutation) {
@@ -81,6 +112,161 @@
     return offscreenCanvas.toDataURL('image/jpeg', 0.85);
   }
 
+  // Natural language mapping for visible facial expressions
+  function formatExpressionText(exprObj) {
+    if (!exprObj || exprObj.status !== 'classified' || !exprObj.label) {
+      return null;
+    }
+    const map = {
+      happy: 'smiling',
+      neutral: 'neutral',
+      sad: 'sad',
+      surprised: 'surprised',
+      angry: 'frowning or angry',
+      disgust: 'disgusted',
+      fearful: 'fearful',
+    };
+    return map[exprObj.label.toLowerCase()] || exprObj.label;
+  }
+
+  // Generate accessible, honest announcement message
+  function generateAnnouncement(data) {
+    if (!data || data.faces_count === 0) {
+      if (previousPeopleInScene.length > 0) {
+        return 'No faces detected in view.';
+      }
+      return null;
+    }
+
+    const faces = data.faces || [];
+    const recognized = faces.filter(f => f.status === 'recognized');
+    const uncertain = faces.filter(f => f.status === 'uncertain');
+    const unknown = faces.filter(f => f.status === 'unknown');
+
+    // 1. Single face scene
+    if (faces.length === 1) {
+      const f = faces[0];
+      const exprText = formatExpressionText(f.expression);
+
+      if (f.status === 'recognized') {
+        if (exprText) {
+          return `Recognized ${f.name}. Estimated visible expression: ${exprText}.`;
+        }
+        return `Recognized ${f.name}.`;
+      }
+
+      if (f.status === 'uncertain') {
+        return 'Person not identified with confidence. Please try again.';
+      }
+
+      // Unknown face
+      if (exprText) {
+        return `An unrecognized person is in front of you. Estimated visible expression: ${exprText}.`;
+      }
+      return 'An unrecognized person is in front of you.';
+    }
+
+    // 2. Multiple faces scene
+    const parts = [];
+    if (recognized.length > 0) {
+      const names = recognized.map(f => f.name).join(' and ');
+      parts.push(`Recognized ${names}`);
+    }
+    if (unknown.length > 0) {
+      parts.push(`${unknown.length} unrecognized person${unknown.length > 1 ? 's' : ''}`);
+    }
+    if (uncertain.length > 0) {
+      parts.push(`${uncertain.length} person with uncertain identity`);
+    }
+
+    return `Detected ${faces.length} people: ${parts.join(', ')}.`;
+  }
+
+  // Voice synthesis executor with queue cancellation
+  function speakAnnouncement(text, forceRepeat = false) {
+    if (!text) return;
+
+    if (latestAnnouncementText) {
+      latestAnnouncementText.textContent = text;
+    }
+    if (repeatBtn) {
+      repeatBtn.disabled = false;
+    }
+    if (announcement) {
+      announcement.textContent = text;
+    }
+
+    if (!hasSupportedSpeech || isSpeechMuted) {
+      lastSpokenMessage = text;
+      lastSpokenTime = Date.now();
+      return;
+    }
+
+    try {
+      window.speechSynthesis.cancel(); // Single utterance only: cancel any pending queue
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      const rate = speechRateSelect ? parseFloat(speechRateSelect.value) : 1.0;
+      utterance.rate = isNaN(rate) ? 1.0 : Math.max(0.5, Math.min(2.0, rate));
+      utterance.pitch = 1.0;
+      utterance.lang = 'en-US';
+
+      window.speechSynthesis.speak(utterance);
+      lastSpokenMessage = text;
+      lastSpokenTime = Date.now();
+    } catch (err) {
+      console.warn('SpeechSynthesis error:', err);
+    }
+  }
+
+  function cancelSpeech() {
+    if (hasSupportedSpeech) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
+  // Duplicate suppression and cooldown decision logic
+  function processSpeechPolicy(data) {
+    const newAnnouncement = generateAnnouncement(data);
+    if (!newAnnouncement) {
+      previousPeopleInScene = [];
+      return;
+    }
+
+    const currentPeople = (data.faces || []).map(f => {
+      if (f.status === 'recognized') return `person_${f.person_id}`;
+      if (f.status === 'uncertain') return 'uncertain';
+      return 'unknown';
+    });
+
+    // Check if new person entered the scene
+    const hasNewPerson = currentPeople.some(p => !previousPeopleInScene.includes(p));
+    previousPeopleInScene = currentPeople;
+
+    const now = Date.now();
+    const cooldownMs = speechCooldownSelect ? parseInt(speechCooldownSelect.value, 10) : 6000;
+    const elapsed = now - lastSpokenTime;
+
+    // Policy:
+    // 1. If a new person entered: announce immediately
+    // 2. If message changed and at least 3s passed: announce change
+    // 3. If exact same message: announce only if cooldown has expired
+    if (hasNewPerson) {
+      speakAnnouncement(newAnnouncement);
+    } else if (newAnnouncement !== lastSpokenMessage) {
+      if (elapsed >= 3000) {
+        speakAnnouncement(newAnnouncement);
+      }
+    } else if (elapsed >= cooldownMs) {
+      speakAnnouncement(newAnnouncement);
+    }
+  }
+
+  // Draw overlay annotations
   function drawDetections(faces, imageWidth, imageHeight) {
     overlay.width = imageWidth;
     overlay.height = imageHeight;
@@ -92,7 +278,6 @@
       const name = face.name || 'Unknown';
       const sim = face.similarity ? (face.similarity * 100).toFixed(0) + '%' : '';
 
-      // Expression descriptor
       let exprSnippet = '';
       if (face.expression && face.expression.status === 'classified' && face.expression.label) {
         const exprName = face.expression.label.charAt(0).toUpperCase() + face.expression.label.slice(1);
@@ -135,6 +320,7 @@
     });
   }
 
+  // Update UI stats and results
   function updateResultsUI(data) {
     if (resultFacesCount) {
       resultFacesCount.textContent = data.faces_count;
@@ -148,35 +334,30 @@
       if (resultPerson) resultPerson.innerHTML = '<span class="badge badge--neutral">No faces detected</span>';
       if (resultSimilarity) resultSimilarity.textContent = '—';
       if (resultExpression) resultExpression.innerHTML = '<span class="badge badge--neutral">—</span>';
-      if (announcement) announcement.textContent = 'No faces detected in view.';
+      processSpeechPolicy(data);
       return;
     }
 
-    const faces = data.faces;
+    const faces = data.faces || [];
     const recognizedList = faces.filter(f => f.status === 'recognized');
     const uncertainList = faces.filter(f => f.status === 'uncertain');
     const unknownList = faces.filter(f => f.status === 'unknown');
 
     let personHtml = '';
-    let announcementText = '';
-
     if (recognizedList.length > 0) {
       personHtml = recognizedList
         .map(f => `<span class="badge badge--success">${f.name} (${(f.similarity * 100).toFixed(0)}%)</span>`)
         .join(' ');
-      announcementText = `Recognized ${recognizedList.map(f => f.name).join(', ')}.`;
       if (resultSimilarity) {
         resultSimilarity.textContent = `${(recognizedList[0].similarity * 100).toFixed(1)}%`;
       }
     } else if (uncertainList.length > 0) {
       personHtml = `<span class="badge badge--warning">Uncertain match</span>`;
-      announcementText = 'Detected person with uncertain identity.';
       if (resultSimilarity) {
         resultSimilarity.textContent = `${(uncertainList[0].similarity * 100).toFixed(1)}%`;
       }
     } else {
       personHtml = `<span class="badge badge--danger">Unknown person</span>`;
-      announcementText = `Detected ${unknownList.length} unknown face(s).`;
       if (resultSimilarity) {
         resultSimilarity.textContent = unknownList[0].similarity > 0 ? `${(unknownList[0].similarity * 100).toFixed(1)}%` : '—';
       }
@@ -189,11 +370,9 @@
         const exprName = primaryExpr.label.charAt(0).toUpperCase() + primaryExpr.label.slice(1);
         const exprPct = (primaryExpr.confidence * 100).toFixed(0);
         resultExpression.innerHTML = `<span class="badge badge--success">${exprName} (${exprPct}%)</span>`;
-        announcementText += ` Showing ${primaryExpr.label} expression.`;
       } else if (primaryExpr && primaryExpr.status === 'uncertain') {
         const candidate = primaryExpr.candidate ? ` (${primaryExpr.candidate})` : '';
         resultExpression.innerHTML = `<span class="badge badge--warning">Uncertain${candidate}</span>`;
-        announcementText += ' Showing uncertain expression.';
       } else {
         resultExpression.innerHTML = '<span class="badge badge--neutral">Unusable crop</span>';
       }
@@ -202,11 +381,12 @@
     if (resultPerson) {
       resultPerson.innerHTML = personHtml;
     }
-    if (announcement) {
-      announcement.textContent = announcementText;
-    }
+
+    // Dispatch announcement policy
+    processSpeechPolicy(data);
   }
 
+  // Single-flight network request with backpressure
   async function performRecognition(imageDataUrl, originalWidth, originalHeight) {
     if (isProcessing) return;
     isProcessing = true;
@@ -249,6 +429,7 @@
   function startLiveRecognition() {
     if (liveInterval) clearInterval(liveInterval);
     onRecognizeClick();
+    // Controlled, measured 1200ms processing loop with single-flight backpressure
     liveInterval = setInterval(function () {
       if (!isProcessing) {
         const dataUrl = captureVideoFrame();
@@ -256,7 +437,7 @@
           performRecognition(dataUrl, video.videoWidth, video.videoHeight);
         }
       }
-    }, 1000);
+    }, 1200);
   }
 
   function stopLiveRecognition() {
@@ -264,8 +445,10 @@
       clearInterval(liveInterval);
       liveInterval = null;
     }
+    cancelSpeech();
   }
 
+  // Event Listeners
   recognizeBtn.addEventListener('click', onRecognizeClick);
 
   liveToggle.addEventListener('change', function () {
@@ -276,7 +459,42 @@
     }
   });
 
-  // Support testing recognition via static uploaded photo
+  // Mute / Unmute speech toggle
+  if (muteBtn) {
+    muteBtn.addEventListener('click', function () {
+      isSpeechMuted = !isSpeechMuted;
+      muteBtn.setAttribute('aria-pressed', isSpeechMuted ? 'true' : 'false');
+
+      if (isSpeechMuted) {
+        cancelSpeech();
+        if (muteBtnText) muteBtnText.textContent = 'Unmute voice';
+        if (speechStatusBadge) {
+          speechStatusBadge.className = 'badge badge--neutral';
+          speechStatusBadge.textContent = 'Muted';
+        }
+      } else {
+        if (muteBtnText) muteBtnText.textContent = 'Mute voice';
+        if (speechStatusBadge) {
+          speechStatusBadge.className = 'badge badge--success';
+          speechStatusBadge.textContent = 'Voice active';
+        }
+        if (lastSpokenMessage) {
+          speakAnnouncement(lastSpokenMessage);
+        }
+      }
+    });
+  }
+
+  // Manual repeat announcement button
+  if (repeatBtn) {
+    repeatBtn.addEventListener('click', function () {
+      if (lastSpokenMessage) {
+        speakAnnouncement(lastSpokenMessage, true);
+      }
+    });
+  }
+
+  // Static image testing support
   if (uploadInput) {
     uploadInput.addEventListener('change', function () {
       const file = uploadInput.files && uploadInput.files[0];
@@ -294,4 +512,7 @@
       reader.readAsDataURL(file);
     });
   }
+
+  // Clean cancellation on unload
+  window.addEventListener('beforeunload', cancelSpeech);
 })();

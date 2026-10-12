@@ -27,7 +27,7 @@ def _error_response(message: str, code: int = 400):
 
 @api_bp.get("/health")
 def health():
-    """Health check endpoint reporting system status and Phase 4 capabilities."""
+    """Health check endpoint reporting system status and Phase 5 capabilities."""
     return jsonify(
         {
             "status": "ok",
@@ -41,7 +41,7 @@ def health():
                 "face_detection": True,
                 "face_recognition": True,
                 "expression_analysis": True,
-                "speech_feedback": False,
+                "speech_feedback": True,
                 "database": True,
             },
         }

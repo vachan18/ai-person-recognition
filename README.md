@@ -4,14 +4,15 @@ An assistive web app, in development, that will tell visually impaired users who
 front of the camera and what facial expression they show, using spoken announcements.
 Everything runs locally on your computer.
 
-**Current status: Phase 4 (Facial Expression Classification).**
+**Current status: Phase 5 (Live Recognition and Voice Feedback).**
 The Flask backend provides an accessible dashboard, webcam preview, local SQLite database layer,
-person registration with image validation, profile management, and a local computer vision pipeline.
+person registration with image validation, profile management, a local computer vision pipeline,
+and spoken audio feedback via browser Web Speech Synthesis.
 Face detection is powered by **OpenCV Zoo YuNet**, identity recognition feature extraction is powered by **OpenCV Zoo SFace**,
-and facial expression classification is powered by **OpenCV Zoo MobileFaceNet (Progressive Teacher)**.
-Speech feedback is **not implemented yet** (scheduled for Phase 5).
+facial expression classification is powered by **OpenCV Zoo MobileFaceNet (Progressive Teacher)**,
+and voice feedback is delivered through client-side **Web Speech Synthesis** (`SpeechSynthesisUtterance`).
 
-## AI Models and Pipeline (Phase 3 & Phase 4)
+## AI Models and Pipeline (Phases 3, 4 & 5)
 
 1. **Face Detection (YuNet):**
    - Model: `face_detection_yunet_2023mar.onnx` via OpenCV's `cv2.FaceDetectorYN`.
@@ -32,24 +33,45 @@ Speech feedback is **not implemented yet** (scheduled for Phase 5).
    - Source: OpenCV Zoo (`opencv/facial_expression_recognition`) based on Progressive Teacher (Jiang et al., 2021, trained on RAF-DB with 88.27% accuracy).
    - Supported categories (7 basic expressions): **`angry`**, **`disgust`**, **`fearful`**, **`happy`**, **`neutral`**, **`sad`**, and **`surprised`**.
    - Input Preprocessing:
-     - 5-point facial landmark alignment via similarity affine transformation (`cv2.estimateAffinePartial2D`) to standard `(112, 112)` anchor coordinates, with fallback to box crop.
+     - 5-point facial landmark alignment via similarity affine transformation (`cv2.estimateAffinePartial2D`) to standard `(112, 112)` anchor coordinates.
      - Color space converted from BGR to RGB.
      - Standardized to float32 normalized tensor with mean `0.5` and std `0.5`: `(x / 255.0 - 0.5) / 0.5`.
      - 4D Blob input passed through OpenCV's native DNN engine (`cv2.dnn.readNetFromONNX`).
    - Confidence & Calibration:
      - Output logits converted to calibrated probabilities via Softmax: $P(c) = \frac{e^{z_c}}{\sum_k e^{z_k}}$.
-     - Threshold: If top probability $< 0.45$, status is flagged as `"uncertain"` to avoid false overconfidence.
+     - Threshold: If top probability $< 0.45$, status is flagged as `"uncertain"`.
      - Degraded or tiny face crops (< 24 px) are flagged as `"unusable"`.
    - Pipeline Independence:
      - Expression classification is executed completely independently of identity matching. Identity similarity scores are never used as expression confidence scores.
      - Probabilistic nature: Visible expressions are presented as visual cues rather than definitive psychological ground truth.
+5. **Live Recognition & Voice Feedback (Phase 5):**
+   - Controlled 1.2s live processing loop with single-flight backpressure (no overlapping requests).
+   - Client-side Speech Synthesis via `window.speechSynthesis` and `SpeechSynthesisUtterance`.
+   - Natural announcement formatting:
+     - Recognized person: *"Recognized {Name}. Estimated visible expression: {expression}."*
+     - Unknown person: *"An unrecognized person is in front of you. Estimated visible expression: {expression}."*
+     - Uncertain match: *"Person not identified with confidence. Please try again."*
+     - Multiple people: *"Detected {N} people: recognized {names}, along with {unknownCount} unrecognized person(s)."*
+     - Scene departure: *"No faces detected in view."* (announced once on exit).
+   - Duplicate Announcement Prevention & Cooldown:
+     - Configurable repeat cooldown (4s, 6s, 10s).
+     - New person entering scene triggers immediate speech.
+     - Identical consecutive frames are suppressed within the cooldown window.
+     - Unstable frame-to-frame expression noise is filtered.
+   - User Controls:
+     - **Mute / Unmute** toggle button (`#mute-speech-btn`).
+     - **Repeat announcement** button (`#repeat-speech-btn`) to re-play the latest message on demand.
+     - **Speech rate** selector (0.8x, 1.0x, 1.2x, 1.5x).
+     - **Cooldown** selector (4s, 6s, 10s).
+     - Stopping recognition or camera immediately cancels queued and in-flight browser speech.
 
-## Privacy and Security in Phase 4
+## Privacy, Safety and Accessibility in Phase 5
 
-- **100% Local Inference:** Face detection, recognition, and expression classification execute entirely locally using OpenCV on this computer. Video frames and facial crops are never transmitted to external AI APIs or cloud servers.
+- **100% Local Inference & Speech:** All computer vision models run locally on CPU via OpenCV, and speech synthesis runs directly in the client browser. No video frames, facial embeddings, or audio data are transmitted to external servers.
 - **Biometric Notice & Consent:** Facial reference images are sensitive biometric data. The Register Person interface requires explicit confirmation of consent before storing reference photos.
 - **Protected File Access:** Uploaded facial photos are stored outside `static/` (default `data/faces/`) and served strictly through application routes with `Cache-Control: private, no-store`.
 - **Model Storage Safety:** Model ONNX files are placed in `models/` and are excluded from version control via `.gitignore`.
+- **Probabilistic Assistance Notice:** This application is an assistive prototype for research and demonstration. Predictions are probabilistic visual estimates, not safety-critical identification or navigation tools.
 - **Access Control Requirement:** This prototype currently runs without authentication on `127.0.0.1`. Authentication and role-based access control MUST be implemented before deploying beyond a trusted local workstation.
 
 
