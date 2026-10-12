@@ -1,123 +1,176 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Vision Command Center{% endblock %}
 
 {% block content %}
-<div class="page">
-  <section class="intro" aria-labelledby="page-title">
-    <h1 id="page-title">{{ config.APP_NAME }}</h1>
-    <p class="lead">
-      An assistive tool that detects people and will describe who is in front of the camera
-      and what expression they show using spoken announcements.
-    </p>
-    <p class="notice">
-      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      <span><strong>Phase 7 active.</strong> Complete verified system: accessible live face recognition, facial expression analysis, and spoken audio feedback running 100% locally on your computer.</span>
-    </p>
-  </section>
+<div class="page vision-command-center">
+  <!-- Command Header & Status Briefing -->
+  <header class="command-header">
+    <div class="command-header__intro">
+      <div class="command-tag">
+        <span class="command-tag__dot" aria-hidden="true"></span>
+        <span>Assistive Vision System &bull; Phase 7 Active</span>
+      </div>
+      <h1 id="page-title">{{ config.APP_NAME }}</h1>
+      <p class="lead">
+        Assistive vision workspace that identifies people and conveys observed facial expressions through spoken announcements for visually impaired users.
+      </p>
+    </div>
+    <div class="command-header__meta">
+      <div class="system-readiness-card">
+        <div class="system-readiness-card__header">
+          <span class="system-readiness-card__title">Local Engine</span>
+          <span class="badge badge--success">Operational</span>
+        </div>
+        <p class="system-readiness-card__desc">On-device YuNet &bull; SFace &bull; FER. All biometric processing runs locally on this computer without cloud transmission.</p>
+      </div>
+    </div>
+  </header>
 
-  <div class="layout">
-    <section class="card camera-card" aria-labelledby="camera-heading">
-      <h2 id="camera-heading">Camera preview &amp; Detection</h2>
+  <!-- Command Center Grid -->
+  <div class="layout command-layout">
+    <!-- 1. Main Vision Workspace (Dominant Viewport) -->
+    <section class="card vision-workspace" aria-labelledby="camera-heading">
+      <div class="workspace-header">
+        <div class="workspace-header__title-group">
+          <h2 id="camera-heading" class="workspace-title">Camera preview &amp; Detection</h2>
+          <span class="workspace-subtitle">Live Stream &amp; Facial Tracking</span>
+        </div>
+        <div class="workspace-header__badges">
+          <span id="recognition-mode-badge" class="badge badge--neutral">Recognition idle</span>
+          <span id="processing-indicator" class="processing-indicator" hidden role="status" aria-live="polite">Analyzing frame...</span>
+        </div>
+      </div>
 
+      <!-- Video Stage -->
       <div class="stage" id="camera-stage">
         <video id="camera-video" playsinline muted autoplay hidden aria-label="Live camera preview"></video>
         <canvas id="camera-overlay" class="stage__overlay" aria-hidden="true" hidden></canvas>
         <div class="stage__placeholder" id="camera-placeholder">
-          <svg class="stage__icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="4" y="12" width="30" height="24" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M34 21l10-6v18l-10-6z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
-          <p class="stage__title">The camera is off</p>
-          <p class="stage__text">Select <strong>Start camera</strong> to begin live video and facial recognition. Video is processed locally on this computer only.</p>
-        </div>
-      </div>
-
-      <!-- Camera Stream Controls -->
-      <div class="controls">
-        <div class="status" id="camera-status" data-state="off" role="status" aria-live="polite" aria-atomic="true">
-          <svg class="status__icon status__icon--off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
-          <svg class="status__icon status__icon--starting" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>
-          <svg class="status__icon status__icon--on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="currentColor"/></svg>
-          <svg class="status__icon status__icon--error" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M12 10v5M12 17.5v.5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          <span id="camera-status-text">Camera off</span>
-        </div>
-
-        <div class="buttons">
-          <button type="button" class="btn btn--primary" id="start-camera">Start camera</button>
-          <button type="button" class="btn" id="stop-camera" disabled>Stop camera</button>
-        </div>
-      </div>
-
-      <!-- Recognition Trigger Bar -->
-      <div class="recognition-bar">
-        <div class="recognition-bar__actions">
-          <button type="button" class="btn btn--primary" id="recognize-btn" disabled>
-            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/>
+          <div class="stage__placeholder-icon-wrap">
+            <svg class="stage__icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+              <rect x="4" y="12" width="30" height="24" rx="4" fill="none" stroke="currentColor" stroke-width="2.5"/>
+              <path d="M34 21l10-6v18l-10-6z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
             </svg>
-            Recognize Face
-          </button>
-          <label class="toggle-control" for="live-recognition-toggle">
-            <input type="checkbox" id="live-recognition-toggle" class="toggle-checkbox" disabled />
-            <span>Continuous mode (1.2s)</span>
-          </label>
-          <span id="recognition-mode-badge" class="badge badge--neutral">Recognition idle</span>
-          <span id="processing-indicator" class="processing-indicator" hidden role="status" aria-live="polite">Analyzing frame...</span>
+          </div>
+          <p class="stage__title">Camera is offline</p>
+          <p class="stage__text">Select <strong>Start camera</strong> to activate on-device video stream. Video frames never leave your local device.</p>
+        </div>
+      </div>
+
+      <!-- Camera Primary Controls Bar -->
+      <div class="workspace-toolbar">
+        <div class="controls workspace-toolbar__stream">
+          <div class="status" id="camera-status" data-state="off" role="status" aria-live="polite" aria-atomic="true">
+            <svg class="status__icon status__icon--off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
+            <svg class="status__icon status__icon--starting" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>
+            <svg class="status__icon status__icon--on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="currentColor"/></svg>
+            <svg class="status__icon status__icon--error" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M12 10v5M12 17.5v.5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            <span id="camera-status-text">Camera off</span>
+          </div>
+
+          <div class="buttons">
+            <button type="button" class="btn btn--primary" id="start-camera">Start camera</button>
+            <button type="button" class="btn" id="stop-camera" disabled>Stop camera</button>
+          </div>
         </div>
 
-        <div class="recognition-bar__upload">
-          <label for="upload-image-input" class="btn btn--small btn--ghost">
-            Test photo upload
-          </label>
-          <input type="file" id="upload-image-input" class="visually-hidden" accept="image/jpeg,image/png,image/webp" />
+        <!-- Recognition Actions -->
+        <div class="recognition-bar workspace-toolbar__recognition">
+          <div class="recognition-bar__actions">
+            <button type="button" class="btn btn--primary" id="recognize-btn" disabled>
+              <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/>
+              </svg>
+              Recognize Face
+            </button>
+            <label class="toggle-control" for="live-recognition-toggle">
+              <input type="checkbox" id="live-recognition-toggle" class="toggle-checkbox" disabled />
+              <span>Continuous mode (1.2s)</span>
+            </label>
+          </div>
+          <div class="recognition-bar__upload">
+            <label for="upload-image-input" class="btn btn--small btn--ghost">Test photo upload</label>
+            <input type="file" id="upload-image-input" class="visually-hidden" accept="image/jpeg,image/png,image/webp" />
+          </div>
         </div>
       </div>
 
       <p class="camera-error" id="camera-error" role="alert" hidden></p>
     </section>
 
-    <div class="side">
-      <section class="card" aria-labelledby="results-heading">
-        <h2 id="results-heading">Recognition results</h2>
-        <div id="recognition-announcement" class="visually-hidden" role="status" aria-live="polite">Ready for face recognition.</div>
-        <dl class="results">
-          <div class="results__row">
-            <dt>Person</dt>
-            <dd id="result-person"><span class="badge badge--neutral">No faces detected</span></dd>
-          </div>
-          <div class="results__row">
-            <dt>Match Score</dt>
-            <dd id="result-similarity">—</dd>
-          </div>
-          <div class="results__row">
-            <dt>Faces in Frame</dt>
-            <dd id="result-faces-count">0</dd>
-          </div>
-          <div class="results__row">
-            <dt>Inference Latency</dt>
-            <dd id="result-latency">—</dd>
-          </div>
-          <div class="results__row">
-            <dt>Expression</dt>
-            <dd id="result-expression"><span class="badge badge--neutral">—</span></dd>
-          </div>
-        </dl>
-
-        <!-- Live Emotion Probability Distribution (Softmax) -->
-        <div id="emotion-bars-container" class="emotion-bars-container" hidden>
-          <h3 class="emotion-bars-heading">Expression Probabilities</h3>
-          <div id="emotion-bars-list" class="emotion-bars-list"></div>
+    <!-- Side Command Panels -->
+    <div class="side command-sidebar">
+      <!-- 2. Observation Panel (Recognition Results) -->
+      <section class="card observation-panel" aria-labelledby="results-heading">
+        <div class="panel-header">
+          <h2 id="results-heading" class="panel-title">Recognition results</h2>
+          <span class="panel-subtitle">Observation Panel</span>
         </div>
-        
+
+        <div id="recognition-announcement" class="visually-hidden" role="status" aria-live="polite">Ready for face recognition.</div>
+
+        <!-- Primary Detected Observation -->
+        <div class="observation-summary">
+          <div class="observation-summary__item">
+            <span class="observation-summary__label">Identified Person</span>
+            <div id="result-person" class="observation-summary__value">
+              <span class="badge badge--neutral">No faces detected</span>
+            </div>
+          </div>
+          <div class="observation-summary__item">
+            <span class="observation-summary__label">Facial Expression</span>
+            <div id="result-expression" class="observation-summary__value">
+              <span class="badge badge--neutral">—</span>
+            </div>
+          </div>
+          <div class="observation-summary__item observation-summary__item--count">
+            <span class="observation-summary__label">Faces in Frame</span>
+            <span id="result-faces-count" class="observation-summary__count">0</span>
+          </div>
+        </div>
+
         <!-- Multi-Face Detailed Breakdown -->
         <div id="faces-detail-container" class="faces-detail-container" hidden>
           <h3 class="faces-detail-heading">Detected Faces Breakdown</h3>
           <div id="faces-detail-list" class="faces-detail-list"></div>
         </div>
 
-        <p class="hint">Start camera and select <strong>Recognize Face</strong> or enable continuous mode. SFace cosine threshold: &ge; 0.363.</p>
+        <!-- Live Emotion Probability Distribution -->
+        <div id="emotion-bars-container" class="emotion-bars-container" hidden>
+          <h3 class="emotion-bars-heading">Expression Probabilities</h3>
+          <div id="emotion-bars-list" class="emotion-bars-list"></div>
+        </div>
+
+        <!-- Technical Diagnostics (Collapsible / Optional) -->
+        <details class="diagnostics-panel" id="diagnostics-details">
+          <summary class="diagnostics-panel__summary">
+            <svg class="diagnostics-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 8v4M12 16v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span>Technical Diagnostics</span>
+          </summary>
+          <dl class="results diagnostics-results">
+            <div class="results__row">
+              <dt>Match Score</dt>
+              <dd id="result-similarity">—</dd>
+            </div>
+            <div class="results__row">
+              <dt>Inference Latency</dt>
+              <dd id="result-latency">—</dd>
+            </div>
+          </dl>
+          <p class="hint hint--diagnostics">SFace cosine threshold: &ge; 0.363 for identity match. Observed expressions are probabilistic cues, not affective certainty.</p>
+        </details>
       </section>
 
-      <section class="card speech-card" aria-labelledby="speech-heading">
-        <div class="speech-card__header">
-          <h2 id="speech-heading">Speech feedback</h2>
+      <!-- 3. Voice Companion (Speech Feedback) -->
+      <section class="card voice-companion" aria-labelledby="speech-heading">
+        <div class="panel-header">
+          <div class="panel-header__title-group">
+            <h2 id="speech-heading" class="panel-title">Speech feedback</h2>
+            <span class="panel-subtitle">Voice Companion</span>
+          </div>
           <span id="speech-status-badge" class="badge badge--success">Voice active</span>
         </div>
 
@@ -139,11 +192,13 @@
           </div>
         </div>
 
+        <!-- Latest Spoken Message Box -->
         <div class="speech-announcement-box" aria-live="off">
           <span class="speech-announcement-box__label">Latest spoken message:</span>
           <p id="latest-announcement-text" class="speech-announcement-box__text">None yet</p>
         </div>
 
+        <!-- Companion Action Buttons -->
         <div class="speech-actions">
           <button type="button" class="btn btn--small" id="mute-speech-btn" aria-pressed="false">
             <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" fill="currentColor"/></svg>
@@ -155,6 +210,7 @@
           </button>
         </div>
 
+        <!-- Speech Settings -->
         <div class="speech-settings">
           <div class="speech-setting-group">
             <label for="speech-rate-select">Speech speed:</label>

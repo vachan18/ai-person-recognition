@@ -12,7 +12,10 @@
 
   <header class="site-header">
     <div class="site-header__inner">
-      <p class="brand">{{ config.APP_NAME }}</p>
+      <div class="brand-group">
+        <span class="brand-badge" aria-hidden="true">Vision Command Center</span>
+        <p class="brand">{{ config.APP_NAME }}</p>
+      </div>
       <nav aria-label="Main">
         <ul class="nav">
           <li><a href="{{ url_for('pages.dashboard') }}"{% if active == 'dashboard' %} aria-current="page"{% endif %}>Dashboard</a></li>
@@ -20,6 +23,10 @@
           <li><a href="{{ url_for('pages.manage_people') }}"{% if active == 'manage' %} aria-current="page"{% endif %}>Manage People</a></li>
         </ul>
       </nav>
+      <div class="system-status-indicator" role="status" aria-label="System status: On-device models active">
+        <span class="status-dot status-dot--ready" aria-hidden="true"></span>
+        <span class="status-label">Local Processing</span>
+      </div>
     </div>
   </header>
 
