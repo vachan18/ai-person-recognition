@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ config.APP_NAME }}{% endblock %} | {{ config.APP_NAME }}</title>
+  <meta name="description" content="An assistive web app that will describe the people and expressions in front of the camera for visually impaired users.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <p class="brand">{{ config.APP_NAME }}</p>
+      <nav aria-label="Main">
+        <ul class="nav">
+          <li><a href="{{ url_for('pages.dashboard') }}"{% if active == 'dashboard' %} aria-current="page"{% endif %}>Dashboard</a></li>
+          <li><a href="{{ url_for('pages.register_person') }}"{% if active == 'register' %} aria-current="page"{% endif %}>Register Person</a></li>
+          <li><a href="{{ url_for('pages.manage_people') }}"{% if active == 'manage' %} aria-current="page"{% endif %}>Manage People</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <p>Version {{ config.APP_VERSION }}. Runs only on this computer. Phase {{ config.PHASE }}: camera preview, person registration and profile management.</p>
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

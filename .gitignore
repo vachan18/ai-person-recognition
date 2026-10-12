@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Privacy-sensitive data: never commit biometric data (used in later phases)
+instance/
+data/
+uploads/
+faces/
+*.db
+*.sqlite
+*.sqlite3
+
+# Model weights (downloaded locally, not committed)
+models/
+*.onnx
+*.pt
+*.pth
+*.tflite
+*.h5
+*.caffemodel
+*.prototxt
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

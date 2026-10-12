@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page">
+  <section class="intro" aria-labelledby="page-title">
+    <h1 id="page-title">{{ config.APP_NAME }}</h1>
+    <p class="lead">
+      This app is being built to tell visually impaired people who is in front of the camera
+      and what expression they show, using spoken announcements.
+    </p>
+    <p class="notice">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span><strong>Early version.</strong> Only the camera preview works today. Person recognition,
+      expression analysis and speech will be added in later phases.</span>
+    </p>
+  </section>
+
+  <div class="layout">
+    <section class="card camera-card" aria-labelledby="camera-heading">
+      <h2 id="camera-heading">Camera preview</h2>
+
+      <div class="stage" id="camera-stage">
+        <video id="camera-video" playsinline muted autoplay hidden aria-label="Live camera preview"></video>
+        <div class="stage__placeholder" id="camera-placeholder">
+          <svg class="stage__icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="4" y="12" width="30" height="24" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M34 21l10-6v18l-10-6z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
+          <p class="stage__title">The camera is off</p>
+          <p class="stage__text">Select <strong>Start camera</strong> to see a live preview.
+          Video stays in your browser. Nothing is uploaded or saved.</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="status" id="camera-status" data-state="off" role="status" aria-live="polite" aria-atomic="true">
+          <svg class="status__icon status__icon--off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
+          <svg class="status__icon status__icon--starting" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>
+          <svg class="status__icon status__icon--on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="currentColor"/></svg>
+          <svg class="status__icon status__icon--error" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M12 10v5M12 17.5v.5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+          <span id="camera-status-text">Camera off</span>
+        </div>
+
+        <div class="buttons">
+          <button type="button" class="btn btn--primary" id="start-camera">Start camera</button>
+          <button type="button" class="btn" id="stop-camera" disabled>Stop camera</button>
+        </div>
+      </div>
+
+      <p class="camera-error" id="camera-error" role="alert" hidden></p>
+    </section>
+
+    <div class="side">
+      <section class="card" aria-labelledby="results-heading">
+        <h2 id="results-heading">Recognition results</h2>
+        <dl class="results">
+          <div class="results__row">
+            <dt>Person</dt>
+            <dd>Not available yet</dd>
+          </div>
+          <div class="results__row">
+            <dt>Expression</dt>
+            <dd>Not available yet</dd>
+          </div>
+        </dl>
+        <p class="hint">Recognition and expression analysis are not running. Nothing shown here is a real result.</p>
+      </section>
+
+      <section class="card" aria-labelledby="speech-heading">
+        <h2 id="speech-heading">Speech feedback</h2>
+        <p class="speech-status"><strong>Not available yet.</strong></p>
+        <p class="hint">Spoken announcements will be added in a later phase. The app does not speak or listen today.</p>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/camera.js') }}" defer></script>
+{% endblock %}

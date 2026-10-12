@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Register Person{% endblock %}
+
+{% block content %}
+<div class="page page--narrow">
+  <header class="page-header">
+    <h1>Register Person</h1>
+    <p class="lead">Add a new person to the local directory with their name and facial reference photo.</p>
+  </header>
+
+  <!-- Privacy & Biometric Notice -->
+  <section class="notice notice--privacy" aria-labelledby="privacy-heading">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12 8v5M12 16v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <h2 id="privacy-heading" class="notice__title">Biometric Data &amp; Privacy Notice</h2>
+      <p class="notice__text">
+        Facial images are sensitive biometric data. Registered photos are stored locally on this computer only and will be used in future phases for offline face recognition. They are never sent to external servers or cloud services.
+      </p>
+    </div>
+  </section>
+
+  <!-- Live Status Announcements -->
+  <div id="form-feedback" class="feedback-region" aria-live="polite" aria-atomic="true">
+    <div id="feedback-error" class="banner banner--error" role="alert" hidden>
+      <span class="banner__icon" aria-hidden="true">&#9888;</span>
+      <span id="feedback-error-text"></span>
+    </div>
+    <div id="feedback-success" class="banner banner--success" role="status" hidden>
+      <span class="banner__icon" aria-hidden="true">&#10003;</span>
+      <div class="banner__content">
+        <span id="feedback-success-text">Person registered successfully!</span>
+        <div class="banner__actions">
+          <a href="{{ url_for('pages.manage_people') }}" class="btn btn--small">View in directory</a>
+          <button type="button" id="register-another-btn" class="btn btn--small btn--primary">Register another</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="card" aria-labelledby="form-heading">
+    <h2 id="form-heading" class="visually-hidden">Registration Form</h2>
+    
+    <form id="register-form" novalidate enctype="multipart/form-data">
+      <!-- Person Name Input -->
+      <div class="form-group">
+        <label for="person-name" class="form-label">
+          Full Name <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="person-name" 
+          name="name" 
+          class="form-input" 
+          required 
+          maxlength="100" 
+          autocomplete="off" 
+          aria-describedby="name-hint"
+          placeholder="e.g. Jane Doe"
+        />
+        <p id="name-hint" class="form-hint">Enter the person's name as you would like spoken announcements to say it.</p>
+      </div>
+
+      <!-- Facial Photo Upload -->
+      <div class="form-group">
+        <label for="person-image" class="form-label">
+          Facial Reference Photo <span class="required" aria-hidden="true">*</span>
+        </label>
+        <p id="image-hint" class="form-hint">
+          Supported formats: JPEG, PNG, WEBP. Maximum file size: 5 MB. A clear, well-lit, frontal portrait works best.
+        </p>
+
+        <div class="upload-area" id="upload-dropzone">
+          <input 
+            type="file" 
+            id="person-image" 
+            name="image" 
+            class="upload-input visually-hidden" 
+            accept="image/jpeg,image/png,image/webp" 
+            required 
+            aria-describedby="image-hint"
+          />
+          <label for="person-image" class="upload-trigger-btn btn">
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Choose image file
+          </label>
+          <span id="chosen-filename" class="file-name-display">No file selected</span>
+        </div>
+
+        <!-- Preview Container -->
+        <div id="preview-container" class="preview-card" hidden>
+          <div class="preview-thumbnail">
+            <img id="image-preview" src="" alt="Selected portrait preview" />
+          </div>
+          <div class="preview-details">
+            <p id="preview-filename" class="preview-name"></p>
+            <p id="preview-meta" class="preview-meta"></p>
+            <button type="button" id="remove-preview-btn" class="btn btn--small btn--ghost">Remove</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Biometric Consent Checkbox -->
+      <div class="form-group consent-group">
+        <label class="checkbox-label" for="consent-checkbox">
+          <input 
+            type="checkbox" 
+            id="consent-checkbox" 
+            name="consent" 
+            class="checkbox-input" 
+            required 
+            aria-describedby="consent-hint"
+          />
+          <span class="checkbox-text">
+            <strong>Consent confirmation:</strong> I confirm that I have obtained explicit permission and consent from this person to store and process their facial image on this device. <span class="required" aria-hidden="true">*</span>
+          </span>
+        </label>
+        <p id="consent-hint" class="form-hint">Confirmation is required by privacy regulations prior to registering biometric reference data.</p>
+      </div>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <button type="submit" id="submit-btn" class="btn btn--primary btn--large">
+          <span id="submit-btn-text">Register Person</span>
+        </button>
+        <a href="{{ url_for('pages.manage_people') }}" class="btn btn--large">Cancel</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/register.js') }}" defer></script>
+{% endblock %}
