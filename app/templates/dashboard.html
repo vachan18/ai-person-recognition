@@ -99,6 +99,12 @@
             <dd id="result-expression"><span class="badge badge--neutral">—</span></dd>
           </div>
         </dl>
+
+        <!-- Live Emotion Probability Distribution (Softmax) -->
+        <div id="emotion-bars-container" class="emotion-bars-container" hidden>
+          <h3 class="emotion-bars-heading">Expression Probabilities</h3>
+          <div id="emotion-bars-list" class="emotion-bars-list"></div>
+        </div>
         
         <!-- Multi-Face Detailed Breakdown -->
         <div id="faces-detail-container" class="faces-detail-container" hidden>
@@ -113,6 +119,24 @@
         <div class="speech-card__header">
           <h2 id="speech-heading">Speech feedback</h2>
           <span id="speech-status-badge" class="badge badge--success">Voice active</span>
+        </div>
+
+        <!-- Audio Waveform Visualizer -->
+        <div class="speech-waveform-wrapper" aria-hidden="true">
+          <div id="audio-waveform" class="audio-waveform">
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+          </div>
         </div>
 
         <div class="speech-announcement-box" aria-live="off">

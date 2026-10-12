@@ -28,6 +28,11 @@
   const facesDetailContainer = document.getElementById('faces-detail-container');
   const facesDetailList = document.getElementById('faces-detail-list');
 
+  // Redesign HUD Elements: Audio Waveform & Emotion Distribution
+  const audioWaveform = document.getElementById('audio-waveform');
+  const emotionBarsContainer = document.getElementById('emotion-bars-container');
+  const emotionBarsList = document.getElementById('emotion-bars-list');
+
   // Voice Feedback elements (Phase 5)
   const speechStatusBadge = document.getElementById('speech-status-badge');
   const latestAnnouncementText = document.getElementById('latest-announcement-text');
@@ -79,6 +84,8 @@
     if (resultExpression) resultExpression.innerHTML = '<span class="badge badge--neutral">—</span>';
     if (facesDetailContainer) facesDetailContainer.hidden = true;
     if (facesDetailList) facesDetailList.innerHTML = '';
+    if (emotionBarsContainer) emotionBarsContainer.hidden = true;
+    if (emotionBarsList) emotionBarsList.innerHTML = '';
     if (announcement) announcement.textContent = 'Ready for face recognition.';
     previousPeopleInScene = [];
   }
@@ -229,15 +236,30 @@
       utterance.pitch = 1.0;
       utterance.lang = 'en-US';
 
+      // Redesign: Animated Audio Waveform hooks
+      utterance.onstart = function () {
+        if (audioWaveform) audioWaveform.classList.add('is-speaking');
+      };
+      utterance.onend = function () {
+        if (audioWaveform) audioWaveform.classList.remove('is-speaking');
+      };
+      utterance.onerror = function () {
+        if (audioWaveform) audioWaveform.classList.remove('is-speaking');
+      };
+
       window.speechSynthesis.speak(utterance);
       lastSpokenMessage = text;
       lastSpokenTime = Date.now();
     } catch (err) {
       console.warn('SpeechSynthesis error:', err);
+      if (audioWaveform) audioWaveform.classList.remove('is-speaking');
     }
   }
 
   function cancelSpeech() {
+    if (audioWaveform) {
+      audioWaveform.classList.remove('is-speaking');
+    }
     if (hasSupportedSpeech) {
       try {
         window.speechSynthesis.cancel();
@@ -284,7 +306,7 @@
     }
   }
 
-  // Draw overlay annotations
+  // Draw overlay annotations with modern HUD corner brackets and landmarks
   function drawDetections(faces, imageWidth, imageHeight) {
     overlay.width = imageWidth;
     overlay.height = imageHeight;
@@ -305,33 +327,83 @@
         exprSnippet = ' | Expr: Uncertain';
       }
 
-      let color = '#d13438'; // red for unknown
+      let color = '#f43f5e'; // neon coral for unknown
       let label = `Unknown${exprSnippet}`;
       if (status === 'recognized') {
-        color = '#107c41'; // green for recognized
+        color = '#10b981'; // neon emerald for recognized
         label = `${name} (${sim})${exprSnippet}`;
       } else if (status === 'uncertain') {
-        color = '#d87a00'; // amber for uncertain
+        color = '#f59e0b'; // neon amber for uncertain
         label = `Uncertain (${sim})${exprSnippet}`;
       }
 
-      // 1. Draw Bounding Box
-      overlayCtx.lineWidth = Math.max(3, Math.round(imageWidth / 250));
+      // 1. Draw Subtle Translucent Box
+      overlayCtx.fillStyle = color === '#10b981' ? 'rgba(16, 185, 129, 0.08)' : (color === '#f59e0b' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(244, 63, 94, 0.08)');
+      overlayCtx.fillRect(box.x, box.y, box.width, box.height);
+
+      overlayCtx.lineWidth = 1;
       overlayCtx.strokeStyle = color;
+      overlayCtx.strokeRect(box.x, box.y, box.width, box.height);
+
+      // 2. Draw Futuristic HUD Corner Brackets
+      const cornerLen = Math.max(12, Math.min(box.width, box.height) * 0.22);
+      overlayCtx.lineWidth = Math.max(3, Math.round(imageWidth / 220));
+      overlayCtx.strokeStyle = color;
+      overlayCtx.lineCap = 'round';
+
+      // Top-Left corner
       overlayCtx.beginPath();
-      overlayCtx.rect(box.x, box.y, box.width, box.height);
+      overlayCtx.moveTo(box.x, box.y + cornerLen);
+      overlayCtx.lineTo(box.x, box.y);
+      overlayCtx.lineTo(box.x + cornerLen, box.y);
       overlayCtx.stroke();
 
-      // 2. Draw Label Badge
+      // Top-Right corner
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(box.x + box.width - cornerLen, box.y);
+      overlayCtx.lineTo(box.x + box.width, box.y);
+      overlayCtx.lineTo(box.x + box.width, box.y + cornerLen);
+      overlayCtx.stroke();
+
+      // Bottom-Left corner
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(box.x, box.y + box.height - cornerLen);
+      overlayCtx.lineTo(box.x, box.y + box.height);
+      overlayCtx.lineTo(box.x + cornerLen, box.y + box.height);
+      overlayCtx.stroke();
+
+      // Bottom-Right corner
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(box.x + box.width - cornerLen, box.y + box.height);
+      overlayCtx.lineTo(box.x + box.width, box.y + box.height);
+      overlayCtx.lineTo(box.x + box.width, box.y + box.height - cornerLen);
+      overlayCtx.stroke();
+
+      // 3. Draw 5 Facial Landmark Points if available
+      if (face.landmarks && Array.isArray(face.landmarks)) {
+        face.landmarks.forEach(function (pt) {
+          overlayCtx.beginPath();
+          overlayCtx.arc(pt[0], pt[1], Math.max(3, Math.round(imageWidth / 280)), 0, 2 * Math.PI);
+          overlayCtx.fillStyle = '#38bdf8';
+          overlayCtx.shadowColor = '#38bdf8';
+          overlayCtx.shadowBlur = 8;
+          overlayCtx.fill();
+          overlayCtx.shadowBlur = 0;
+        });
+      }
+
+      // 4. Draw Label Badge with rounded container
       const fontSize = Math.max(13, Math.round(imageWidth / 38));
       overlayCtx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
       const textWidth = overlayCtx.measureText(label).width;
-      const pad = 6;
+      const pad = 7;
       const labelX = box.x;
-      const labelY = Math.max(fontSize + pad * 2, box.y - 6);
+      const labelY = Math.max(fontSize + pad * 2, box.y - 8);
 
       overlayCtx.fillStyle = color;
-      overlayCtx.fillRect(labelX, labelY - fontSize - pad, textWidth + pad * 2, fontSize + pad * 1.5);
+      overlayCtx.beginPath();
+      overlayCtx.roundRect(labelX, labelY - fontSize - pad, textWidth + pad * 2, fontSize + pad * 1.5, 4);
+      overlayCtx.fill();
 
       overlayCtx.fillStyle = '#ffffff';
       overlayCtx.fillText(label, labelX + pad, labelY - pad / 2);
@@ -354,6 +426,8 @@
       if (resultExpression) resultExpression.innerHTML = '<span class="badge badge--neutral">—</span>';
       if (facesDetailContainer) facesDetailContainer.hidden = true;
       if (facesDetailList) facesDetailList.innerHTML = '';
+      if (emotionBarsContainer) emotionBarsContainer.hidden = true;
+      if (emotionBarsList) emotionBarsList.innerHTML = '';
       processSpeechPolicy(data);
       return;
     }
@@ -395,6 +469,32 @@
         resultExpression.innerHTML = `<span class="badge badge--warning">Uncertain${candidate}</span>`;
       } else {
         resultExpression.innerHTML = '<span class="badge badge--neutral">Unusable crop</span>';
+      }
+
+      // Redesign: Dynamic Emotion Softmax Probability Bars
+      if (emotionBarsContainer && emotionBarsList && primaryExpr && primaryExpr.scores) {
+        const scores = primaryExpr.scores;
+        const sorted = Object.entries(scores).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 4);
+        if (sorted.length > 0) {
+          emotionBarsContainer.hidden = false;
+          emotionBarsList.innerHTML = sorted.map(function (pair) {
+            const label = pair[0];
+            const val = pair[1];
+            const pct = Math.round(val * 100);
+            const isTop = label.toLowerCase() === (primaryExpr.label || '').toLowerCase();
+            return '<div class="emotion-bar-item">' +
+              '<span class="emotion-bar-label">' + label + '</span>' +
+              '<div class="emotion-bar-track">' +
+                '<div class="emotion-bar-fill' + (isTop ? ' emotion-bar-fill--top' : '') + '" style="width: ' + pct + '%"></div>' +
+              '</div>' +
+              '<span class="emotion-bar-pct">' + pct + '%</span>' +
+            '</div>';
+          }).join('');
+        } else {
+          emotionBarsContainer.hidden = true;
+        }
+      } else if (emotionBarsContainer) {
+        emotionBarsContainer.hidden = true;
       }
     }
 
