@@ -606,7 +606,7 @@
     });
   }
 
-  // Static image testing support
+  // Static image testing support (with client-side scaling to prevent 413 errors)
   if (uploadInput) {
     uploadInput.addEventListener('change', function () {
       const file = uploadInput.files && uploadInput.files[0];
@@ -614,12 +614,31 @@
 
       const reader = new FileReader();
       reader.onload = function (e) {
-        const dataUrl = e.target.result;
+        const rawDataUrl = e.target.result;
         const img = new Image();
         img.onload = function () {
-          performRecognition(dataUrl, img.naturalWidth, img.naturalHeight);
+          const maxDim = 1280;
+          let w = img.naturalWidth;
+          let h = img.naturalHeight;
+
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+            offscreenCanvas.width = w;
+            offscreenCanvas.height = h;
+            offscreenCtx.drawImage(img, 0, 0, w, h);
+            const scaledUrl = offscreenCanvas.toDataURL('image/jpeg', 0.85);
+            performRecognition(scaledUrl, w, h);
+          } else {
+            performRecognition(rawDataUrl, w, h);
+          }
         };
-        img.src = dataUrl;
+        img.src = rawDataUrl;
       };
       reader.readAsDataURL(file);
     });

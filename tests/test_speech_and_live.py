@@ -14,7 +14,7 @@ def test_health_reports_all_phase5_capabilities_true(client):
     body = resp.get_json()
     assert body["status"] == "ok"
     assert body["phase"] >= 5
-    assert body["version"] in ("0.5.0", "0.6.0")
+    assert body["version"] in ("0.5.0", "0.6.0", "1.0.0")
 
     caps = body["capabilities"]
     assert caps["camera_preview"] is True

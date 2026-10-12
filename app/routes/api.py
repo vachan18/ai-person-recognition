@@ -27,7 +27,7 @@ def _error_response(message: str, code: int = 400):
 
 @api_bp.get("/health")
 def health():
-    """Health check endpoint reporting system status and Phase 6 capabilities."""
+    """Health check endpoint reporting system status and Phase 7 capabilities."""
     return jsonify(
         {
             "status": "ok",

@@ -35,8 +35,8 @@ def _env_float(name: str, default: float) -> float:
 
 class Config:
     APP_NAME = "AI Person Recognition"
-    APP_VERSION = "0.6.0"
-    PHASE = 6
+    APP_VERSION = "1.0.0"
+    PHASE = 7
 
     # A missing SECRET_KEY must never fall back to a hardcoded value.
     SECRET_KEY = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
@@ -73,8 +73,8 @@ class Config:
     FER_MIN_FACE_SIZE = _env_int("FER_MIN_FACE_SIZE", 24)
 
     # Image upload restrictions
-    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB max request size
-    MAX_IMAGE_SIZE_BYTES = _env_int("MAX_IMAGE_SIZE_BYTES", 5 * 1024 * 1024)
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10 MB max request size
+    MAX_IMAGE_SIZE_BYTES = _env_int("MAX_IMAGE_SIZE_BYTES", 10 * 1024 * 1024)
     ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 
 

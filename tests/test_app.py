@@ -42,12 +42,12 @@ def test_health_ok(client):
     body = resp.get_json()
     assert body["status"] == "ok"
     assert body["app"] == "AI Person Recognition"
-    assert body["phase"] == 6
-    assert body["version"] == "0.6.0"
+    assert body["phase"] == 7
+    assert body["version"] == "1.0.0"
     assert {"version", "timestamp", "python", "capabilities"} <= body.keys()
 
 
-def test_health_reports_phase6_capabilities(client):
+def test_health_reports_phase7_capabilities(client):
     caps = client.get("/api/health").get_json()["capabilities"]
     assert caps["camera_preview"] is True
     assert caps["database"] is True
