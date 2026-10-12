@@ -42,16 +42,18 @@ def test_health_ok(client):
     body = resp.get_json()
     assert body["status"] == "ok"
     assert body["app"] == "AI Person Recognition"
-    assert body["phase"] == 2
+    assert body["phase"] == 3
     assert {"version", "timestamp", "python", "capabilities"} <= body.keys()
 
 
-def test_health_reports_database_true_and_ai_false(client):
+def test_health_reports_phase3_capabilities(client):
     caps = client.get("/api/health").get_json()["capabilities"]
     assert caps["camera_preview"] is True
     assert caps["database"] is True
-    for name in ("face_detection", "face_recognition", "expression_analysis", "speech_feedback"):
-        assert caps[name] is False
+    assert caps["face_detection"] is True
+    assert caps["face_recognition"] is True
+    assert caps["expression_analysis"] is False
+    assert caps["speech_feedback"] is False
 
 
 def test_health_rejects_post_with_json_405(client):
@@ -80,6 +82,8 @@ def test_dashboard_has_camera_controls_and_status_region(client):
     html = client.get("/").get_data(as_text=True)
     assert 'id="start-camera"' in html and "Start camera" in html
     assert 'id="stop-camera"' in html and "Stop camera" in html
+    assert 'id="recognize-btn"' in html and "Recognize Face" in html
+    assert 'id="camera-overlay"' in html
     assert re.search(r'id="camera-status"[^>]*role="status"', html)
     assert re.search(r'id="camera-error"[^>]*role="alert"', html)
     assert "<video" in html and 'aria-label="Live camera preview"' in html
@@ -95,7 +99,7 @@ def test_dashboard_navigation(client):
 
 def test_dashboard_is_honest_about_unavailable_features(client):
     html = client.get("/").get_data(as_text=True)
-    assert html.count("Not available yet") >= 3  # person, expression, speech
+    assert html.count("Not available yet") >= 2  # expression, speech
     assert "Speech feedback" in html and "Recognition results" in html
 
 
@@ -136,6 +140,8 @@ def test_static_assets_served(client):
     assert client.get("/static/js/camera.js").status_code == 200
     assert client.get("/static/js/register.js").status_code == 200
     assert client.get("/static/js/manage.js").status_code == 200
+    assert client.get("/static/js/recognition.js").status_code == 200
+
 
 
 

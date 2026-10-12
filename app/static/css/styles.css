@@ -549,6 +549,66 @@ main:focus { outline: none; }
   border-left: 4px solid var(--error-ink);
 }
 
+/* ---- Phase 3: Recognition Canvas Overlay & Controls ---- */
+.stage__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.recognition-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.recognition-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.recognition-bar__upload {
+  display: flex;
+  align-items: center;
+}
+
+.toggle-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toggle-checkbox {
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.badge--success { background: #dcf3e4; color: #0d522a; }
+.badge--warning { background: #fff1cc; color: #7a4b00; }
+.badge--danger  { background: #fde6e6; color: #8a1818; }
+.badge--neutral { background: #e8edf0; color: #465764; }
+
 /* ---- Small screens ---- */
 @media (max-width: 36rem) {
   .controls { flex-direction: column; align-items: stretch; }
@@ -558,6 +618,8 @@ main:focus { outline: none; }
   .modal-actions .btn { width: 100%; }
   .person-card__actions { flex-direction: column; }
   .person-card__actions .btn { width: 100%; }
+  .recognition-bar { flex-direction: column; align-items: stretch; }
+  .recognition-bar__actions .btn { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -566,8 +628,9 @@ main:focus { outline: none; }
 
 /* Windows High Contrast / forced colors: keep borders and focus visible. */
 @media (forced-colors: active) {
-  .stage, .card, .status, .btn, .modal-card, .preview-thumbnail, .form-input { border: 2px solid CanvasText; }
+  .stage, .card, .status, .btn, .modal-card, .preview-thumbnail, .form-input, .badge { border: 2px solid CanvasText; }
   .btn:disabled { border-style: dashed; }
   :focus-visible { outline: 3px solid Highlight; box-shadow: none; }
 }
+
 

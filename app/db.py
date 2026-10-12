@@ -22,8 +22,21 @@ CREATE TABLE IF NOT EXISTS facial_images (
     FOREIGN KEY (person_id) REFERENCES persons (id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS face_embeddings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    person_id INTEGER NOT NULL,
+    facial_image_id INTEGER,
+    embedding BLOB NOT NULL,
+    model_name TEXT NOT NULL,
+    model_version TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (person_id) REFERENCES persons (id) ON DELETE CASCADE,
+    FOREIGN KEY (facial_image_id) REFERENCES facial_images (id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_facial_images_person_id ON facial_images (person_id);
 CREATE INDEX IF NOT EXISTS idx_persons_name ON persons (name);
+CREATE INDEX IF NOT EXISTS idx_face_embeddings_person_id ON face_embeddings (person_id);
 """
 
 

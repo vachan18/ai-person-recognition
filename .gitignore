@@ -18,6 +18,7 @@ env/
 # Privacy-sensitive data: never commit biometric data (used in later phases)
 instance/
 data/
+!tests/data/
 uploads/
 faces/
 *.db

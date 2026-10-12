@@ -4,19 +4,41 @@ An assistive web app, in development, that will tell visually impaired users who
 front of the camera and what facial expression they show, using spoken announcements.
 Everything runs locally on your computer.
 
-**Current status: Phase 2 (Database, Person Registration, and Profile Management).**
+**Current status: Phase 3 (AI Face Detection and Person Recognition).**
 The Flask backend provides an accessible dashboard, webcam preview, local SQLite database layer,
-person registration with image validation, and profile management (viewing, searching, editing, photo replacement, and deletion).
-Face detection, recognition, expression analysis, and speech feedback are **not implemented yet** (scheduled for Phase 3 and Phase 4).
+person registration with image validation, profile management, and a local computer vision pipeline.
+Face detection is powered by **OpenCV Zoo YuNet**, and identity recognition feature extraction is powered by **OpenCV Zoo SFace**.
+Facial expression analysis and speech feedback are **not implemented yet** (scheduled for Phase 4 and Phase 5).
 
-## Privacy and Security in Phase 2
+## AI Models and Recognition Pipeline (Phase 3)
 
-- **Local Storage Only:** All reference facial images and database records are stored strictly on this computer (default `data/`). No images or biometric data are sent to cloud services or external servers.
-- **Biometric Notice & Consent:** Facial images are sensitive biometric data. The Register Person interface requires explicit confirmation that the user has consent to store the reference photo.
-- **Protected File Access:** Uploaded facial photos are NOT stored in the public `static/` directory. They are accessible only through authenticated application endpoints (`/api/persons/<id>/image`) with cache-prevention headers (`Cache-Control: private, no-store`).
-- **Input Validation & Safety:** File uploads are validated server-side for decodability, dimensions, size limits (5 MB max), and safe randomized filenames to prevent directory traversal and arbitrary file execution.
-- **Single-origin Execution:** The server binds to `127.0.0.1` (localhost only) by default with strict Content-Security-Policy (CSP) headers.
-- **Access Control Requirement:** This prototype currently runs without user authentication because it is designed for a single-user trusted local workstation. Authentication and role-based access control MUST be implemented before deploying or exposing this application beyond a trusted local environment.
+1. **Face Detection (YuNet):**
+   - Model: `face_detection_yunet_2023mar.onnx` via OpenCV's `cv2.FaceDetectorYN`.
+   - Detects faces in camera frames or uploaded images, returning bounding boxes, detection confidence, and 5 facial landmarks (eyes, nose, mouth corners).
+   - Handles multi-face frames and frames with no faces.
+2. **Face Alignment & Feature Extraction (SFace):**
+   - Model: `face_recognition_sface_2021dec.onnx` via OpenCV's `cv2.FaceRecognizerSF`.
+   - Aligns detected face crops using 5 landmarks and extracts 128-dimensional L2-normalized feature vectors.
+   - Embeddings are validated for numerical integrity (finite float32 values, no NaNs/Infs).
+3. **Database Integration & Persistence:**
+   - On person registration (`POST /api/persons`) or photo replacement (`POST /api/persons/<id>/image`), the system verifies that exactly one face is visible, extracts the embedding, and stores it in the `face_embeddings` table.
+   - Embeddings are linked via foreign keys to `persons` and cascade-deleted on profile deletion.
+4. **Matching & Threshold Calibration:**
+   - Feature comparison is performed using cosine similarity via OpenCV (`FaceRecognizerSF_FR_COSINE`).
+   - Default matching threshold is **`0.363`** (the official SFace benchmark threshold).
+   - Cosine similarity $\ge 0.363$: **Recognized** (reports person ID and name).
+   - Cosine similarity between $0.300$ and $0.363$: **Uncertain** (treated conservatively).
+   - Cosine similarity $< 0.300$: **Unknown**.
+   - *Threshold Calibration:* In real-world environments, optimal thresholds depend on lighting conditions, camera resolution, and angles. You can adjust `RECOGNITION_COSINE_THRESHOLD` in your `.env` file to balance False Acceptance Rate (FAR) and False Rejection Rate (FRR) using known-person and unknown-person evaluation images.
+
+## Privacy and Security in Phase 3
+
+- **100% Local Inference:** Face detection and recognition models execute locally using OpenCV on this computer. Video frames and facial crops are never sent to external AI APIs or cloud servers.
+- **Biometric Notice & Consent:** Facial reference images are sensitive biometric data. The Register Person interface requires explicit confirmation of consent before storing reference photos.
+- **Protected File Access:** Uploaded facial photos are stored outside `static/` (default `data/faces/`) and served strictly through application routes with `Cache-Control: private, no-store`.
+- **Model Storage Safety:** Model ONNX files are placed in `models/` and are excluded from version control via `.gitignore`.
+- **Access Control Requirement:** This prototype currently runs without authentication on `127.0.0.1`. Authentication and role-based access control MUST be implemented before deploying beyond a trusted local workstation.
+
 
 
 ## Requirements

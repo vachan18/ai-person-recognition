@@ -26,10 +26,17 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+
+
 class Config:
     APP_NAME = "AI Person Recognition"
-    APP_VERSION = "0.2.0"
-    PHASE = 2
+    APP_VERSION = "0.3.0"
+    PHASE = 3
 
     # A missing SECRET_KEY must never fall back to a hardcoded value.
     SECRET_KEY = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
@@ -44,6 +51,21 @@ class Config:
     DATA_DIR = os.environ.get("DATA_DIR") or os.path.join(_BASE_DIR, "data")
     DATABASE_PATH = os.environ.get("DATABASE_PATH") or os.path.join(DATA_DIR, "app.db")
     UPLOAD_DIR = os.environ.get("UPLOAD_DIR") or os.path.join(DATA_DIR, "faces")
+
+    # Local AI Model Configuration (OpenCV Zoo YuNet and SFace)
+    MODELS_DIR = os.environ.get("MODELS_DIR") or os.path.join(_BASE_DIR, "models")
+    YUNET_MODEL_PATH = os.environ.get("YUNET_MODEL_PATH") or os.path.join(
+        MODELS_DIR, "face_detection_yunet_2023mar.onnx"
+    )
+    SFACE_MODEL_PATH = os.environ.get("SFACE_MODEL_PATH") or os.path.join(
+        MODELS_DIR, "face_recognition_sface_2021dec.onnx"
+    )
+
+    # Detection and Matching Thresholds
+    YUNET_SCORE_THRESHOLD = _env_float("YUNET_SCORE_THRESHOLD", 0.6)
+    YUNET_NMS_THRESHOLD = _env_float("YUNET_NMS_THRESHOLD", 0.3)
+    RECOGNITION_COSINE_THRESHOLD = _env_float("RECOGNITION_COSINE_THRESHOLD", 0.363)
+    RECOGNITION_UNCERTAIN_LOWER = _env_float("RECOGNITION_UNCERTAIN_LOWER", 0.30)
 
     # Image upload restrictions
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB max request size

@@ -48,3 +48,12 @@ def sample_webp_bytes():
     img = Image.new("RGB", (80, 80), color=(50, 150, 50))
     img.save(buf, format="WEBP")
     return buf.getvalue()
+
+
+@pytest.fixture()
+def sample_face_bytes():
+    """Load a real valid portrait containing a detectable human face."""
+    face_path = "tests/data/sample_face.jpg"
+    with open(face_path, "rb") as f:
+        return f.read()
+

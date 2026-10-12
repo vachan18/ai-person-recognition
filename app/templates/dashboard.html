@@ -6,30 +6,30 @@
   <section class="intro" aria-labelledby="page-title">
     <h1 id="page-title">{{ config.APP_NAME }}</h1>
     <p class="lead">
-      This app is being built to tell visually impaired people who is in front of the camera
-      and what expression they show, using spoken announcements.
+      An assistive tool that detects people and will describe who is in front of the camera
+      and what expression they show using spoken announcements.
     </p>
     <p class="notice">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      <span><strong>Early version.</strong> Only the camera preview works today. Person recognition,
-      expression analysis and speech will be added in later phases.</span>
+      <span><strong>Phase 3 active.</strong> Face detection and person recognition are running locally using OpenCV YuNet and SFace models. Expression classification and speech feedback will follow in later phases.</span>
     </p>
   </section>
 
   <div class="layout">
     <section class="card camera-card" aria-labelledby="camera-heading">
-      <h2 id="camera-heading">Camera preview</h2>
+      <h2 id="camera-heading">Camera preview &amp; Detection</h2>
 
       <div class="stage" id="camera-stage">
         <video id="camera-video" playsinline muted autoplay hidden aria-label="Live camera preview"></video>
+        <canvas id="camera-overlay" class="stage__overlay" aria-hidden="true" hidden></canvas>
         <div class="stage__placeholder" id="camera-placeholder">
           <svg class="stage__icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="4" y="12" width="30" height="24" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M34 21l10-6v18l-10-6z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>
           <p class="stage__title">The camera is off</p>
-          <p class="stage__text">Select <strong>Start camera</strong> to see a live preview.
-          Video stays in your browser. Nothing is uploaded or saved.</p>
+          <p class="stage__text">Select <strong>Start camera</strong> to begin live video and facial recognition. Video is processed locally on this computer only.</p>
         </div>
       </div>
 
+      <!-- Camera Stream Controls -->
       <div class="controls">
         <div class="status" id="camera-status" data-state="off" role="status" aria-live="polite" aria-atomic="true">
           <svg class="status__icon status__icon--off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
@@ -45,23 +45,59 @@
         </div>
       </div>
 
+      <!-- Recognition Trigger Bar -->
+      <div class="recognition-bar">
+        <div class="recognition-bar__actions">
+          <button type="button" class="btn btn--primary" id="recognize-btn" disabled>
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/>
+            </svg>
+            Recognize Face
+          </button>
+          <label class="toggle-control" for="live-recognition-toggle">
+            <input type="checkbox" id="live-recognition-toggle" class="toggle-checkbox" disabled />
+            <span>Continuous mode (1s)</span>
+          </label>
+        </div>
+
+        <div class="recognition-bar__upload">
+          <label for="upload-image-input" class="btn btn--small btn--ghost">
+            Test photo upload
+          </label>
+          <input type="file" id="upload-image-input" class="visually-hidden" accept="image/jpeg,image/png,image/webp" />
+        </div>
+      </div>
+
       <p class="camera-error" id="camera-error" role="alert" hidden></p>
     </section>
 
     <div class="side">
       <section class="card" aria-labelledby="results-heading">
         <h2 id="results-heading">Recognition results</h2>
+        <div id="recognition-announcement" class="visually-hidden" role="status" aria-live="polite">Ready for face recognition.</div>
         <dl class="results">
           <div class="results__row">
             <dt>Person</dt>
-            <dd>Not available yet</dd>
+            <dd id="result-person"><span class="badge badge--neutral">No faces detected</span></dd>
+          </div>
+          <div class="results__row">
+            <dt>Match Score</dt>
+            <dd id="result-similarity">—</dd>
+          </div>
+          <div class="results__row">
+            <dt>Faces in Frame</dt>
+            <dd id="result-faces-count">0</dd>
+          </div>
+          <div class="results__row">
+            <dt>Inference Latency</dt>
+            <dd id="result-latency">—</dd>
           </div>
           <div class="results__row">
             <dt>Expression</dt>
-            <dd>Not available yet</dd>
+            <dd>Not available yet (Phase 4)</dd>
           </div>
         </dl>
-        <p class="hint">Recognition and expression analysis are not running. Nothing shown here is a real result.</p>
+        <p class="hint">Start camera and select <strong>Recognize Face</strong> or enable continuous mode. SFace cosine threshold: &ge; 0.363.</p>
       </section>
 
       <section class="card" aria-labelledby="speech-heading">
@@ -76,4 +112,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/camera.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/recognition.js') }}" defer></script>
 {% endblock %}

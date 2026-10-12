@@ -13,13 +13,13 @@ def test_list_persons_empty_initially(client):
     assert data["persons"] == []
 
 
-def test_create_person_success(client, sample_image_bytes, app):
+def test_create_person_success(client, sample_face_bytes, app):
     resp = client.post(
         "/api/persons",
         data={
             "name": "Grace Hopper",
             "consent": "true",
-            "image": (io.BytesIO(sample_image_bytes), "grace.jpg"),
+            "image": (io.BytesIO(sample_face_bytes), "grace.jpg"),
         },
         content_type="multipart/form-data",
     )
@@ -37,13 +37,29 @@ def test_create_person_success(client, sample_image_bytes, app):
     assert "file_path" not in person
 
 
-def test_create_person_requires_name(client, sample_image_bytes):
+def test_create_person_rejects_photo_with_no_face(client, sample_image_bytes):
+    resp = client.post(
+        "/api/persons",
+        data={
+            "name": "No Face User",
+            "consent": "true",
+            "image": (io.BytesIO(sample_image_bytes), "blank.jpg"),
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data["status"] == "error"
+    assert "no face was detected" in data["error"]["message"].lower()
+
+
+def test_create_person_requires_name(client, sample_face_bytes):
     resp = client.post(
         "/api/persons",
         data={
             "name": "   ",
             "consent": "true",
-            "image": (io.BytesIO(sample_image_bytes), "grace.jpg"),
+            "image": (io.BytesIO(sample_face_bytes), "grace.jpg"),
         },
         content_type="multipart/form-data",
     )
@@ -53,12 +69,12 @@ def test_create_person_requires_name(client, sample_image_bytes):
     assert "name is required" in data["error"]["message"].lower()
 
 
-def test_create_person_requires_consent(client, sample_image_bytes):
+def test_create_person_requires_consent(client, sample_face_bytes):
     resp = client.post(
         "/api/persons",
         data={
             "name": "Ada Lovelace",
-            "image": (io.BytesIO(sample_image_bytes), "ada.jpg"),
+            "image": (io.BytesIO(sample_face_bytes), "ada.jpg"),
         },
         content_type="multipart/form-data",
     )
@@ -95,13 +111,13 @@ def test_create_person_rejects_corrupted_image(client):
     assert "corrupt" in data["error"]["message"].lower() or "not a valid" in data["error"]["message"].lower()
 
 
-def test_get_person_by_id(client, sample_image_bytes):
+def test_get_person_by_id(client, sample_face_bytes):
     create_resp = client.post(
         "/api/persons",
         data={
             "name": "Margaret Hamilton",
             "consent": "true",
-            "image": (io.BytesIO(sample_image_bytes), "margaret.jpg"),
+            "image": (io.BytesIO(sample_face_bytes), "margaret.jpg"),
         },
         content_type="multipart/form-data",
     )
@@ -113,7 +129,7 @@ def test_get_person_by_id(client, sample_image_bytes):
     assert data["status"] == "ok"
     assert data["person"]["id"] == person_id
     assert data["person"]["name"] == "Margaret Hamilton"
-    assert data["person"]["image_metadata"]["format"] == "JPEG"
+    assert data["person"]["has_embedding"] is True
 
 
 def test_get_nonexistent_person_returns_404(client):
@@ -124,13 +140,13 @@ def test_get_nonexistent_person_returns_404(client):
     assert data["error"]["code"] == 404
 
 
-def test_update_person_name(client, sample_image_bytes):
+def test_update_person_name(client, sample_face_bytes):
     create_resp = client.post(
         "/api/persons",
         data={
             "name": "Hedy Lamarr",
             "consent": "true",
-            "image": (io.BytesIO(sample_image_bytes), "hedy.jpg"),
+            "image": (io.BytesIO(sample_face_bytes), "hedy.jpg"),
         },
         content_type="multipart/form-data",
     )
@@ -149,13 +165,13 @@ def test_update_person_name(client, sample_image_bytes):
     assert get_resp.get_json()["person"]["name"] == "Hedy Kiesler Lamarr"
 
 
-def test_update_person_name_rejects_empty(client, sample_image_bytes):
+def test_update_person_name_rejects_empty(client, sample_face_bytes):
     create_resp = client.post(
         "/api/persons",
         data={
             "name": "Katherine Johnson",
             "consent": "true",
-            "image": (io.BytesIO(sample_image_bytes), "katherine.jpg"),
+            "image": (io.BytesIO(sample_face_bytes), "katherine.jpg"),
         },
         content_type="multipart/form-data",
     )
@@ -173,13 +189,13 @@ def test_update_nonexistent_person_returns_404(client):
     assert resp.status_code == 404
 
 
-def test_replace_person_image_cleans_up_old_file(client, sample_image_bytes, sample_png_bytes, app):
+def test_replace_person_image_cleans_up_old_file(client, sample_face_bytes, app):
     create_resp = client.post(
         "/api/persons",
         data={
             "name": "Alan Turing",
             "consent": "true",
-            "image": (io.BytesIO(sample_image_bytes), "alan.jpg"),
+            "image": (io.BytesIO(sample_face_bytes), "alan.jpg"),
         },
         content_type="multipart/form-data",
     )
@@ -191,15 +207,13 @@ def test_replace_person_image_cleans_up_old_file(client, sample_image_bytes, sam
     assert len(files_before) == 1
     old_file = files_before[0]
 
-    # Replace with PNG
+    # Replace with same face under png name
     replace_resp = client.post(
         f"/api/persons/{person_id}/image",
-        data={"image": (io.BytesIO(sample_png_bytes), "new_alan.png")},
+        data={"image": (io.BytesIO(sample_face_bytes), "new_alan.jpg")},
         content_type="multipart/form-data",
     )
     assert replace_resp.status_code == 200
-    updated_person = replace_resp.get_json()["person"]
-    assert updated_person["image_metadata"]["format"] == "PNG"
 
     # Verify old file was deleted and only new file exists
     files_after = os.listdir(upload_dir)
@@ -207,22 +221,22 @@ def test_replace_person_image_cleans_up_old_file(client, sample_image_bytes, sam
     assert old_file not in files_after
 
 
-def test_replace_image_nonexistent_person_returns_404(client, sample_image_bytes):
+def test_replace_image_nonexistent_person_returns_404(client, sample_face_bytes):
     resp = client.post(
         "/api/persons/9999/image",
-        data={"image": (io.BytesIO(sample_image_bytes), "test.jpg")},
+        data={"image": (io.BytesIO(sample_face_bytes), "test.jpg")},
         content_type="multipart/form-data",
     )
     assert resp.status_code == 404
 
 
-def test_delete_person_removes_db_records_and_disk_files(client, sample_image_bytes, app):
+def test_delete_person_removes_db_records_and_disk_files(client, sample_face_bytes, app):
     create_resp = client.post(
         "/api/persons",
         data={
             "name": "Claude Shannon",
             "consent": "true",
-            "image": (io.BytesIO(sample_image_bytes), "claude.jpg"),
+            "image": (io.BytesIO(sample_face_bytes), "claude.jpg"),
         },
         content_type="multipart/form-data",
     )
@@ -248,13 +262,13 @@ def test_delete_nonexistent_person_returns_404(client):
     assert resp.status_code == 404
 
 
-def test_serve_image_successfully(client, sample_image_bytes):
+def test_serve_image_successfully(client, sample_face_bytes):
     create_resp = client.post(
         "/api/persons",
         data={
             "name": "Radia Perlman",
             "consent": "true",
-            "image": (io.BytesIO(sample_image_bytes), "radia.jpg"),
+            "image": (io.BytesIO(sample_face_bytes), "radia.jpg"),
         },
         content_type="multipart/form-data",
     )
@@ -264,7 +278,7 @@ def test_serve_image_successfully(client, sample_image_bytes):
     assert img_resp.status_code == 200
     assert img_resp.mimetype == "image/jpeg"
     assert "no-store" in img_resp.headers["Cache-Control"]
-    assert img_resp.data == sample_image_bytes
+    assert img_resp.data == sample_face_bytes
 
 
 def test_serve_image_not_found(client):
@@ -272,7 +286,7 @@ def test_serve_image_not_found(client):
     assert resp.status_code == 404
 
 
-def test_search_persons_filtering(client, sample_image_bytes):
+def test_search_persons_filtering(client, sample_face_bytes):
     names = ["Alice Smith", "Bob Jones", "Alice Cooper"]
     for n in names:
         client.post(
@@ -280,7 +294,7 @@ def test_search_persons_filtering(client, sample_image_bytes):
             data={
                 "name": n,
                 "consent": "true",
-                "image": (io.BytesIO(sample_image_bytes), f"{n}.jpg"),
+                "image": (io.BytesIO(sample_face_bytes), f"{n}.jpg"),
             },
             content_type="multipart/form-data",
         )
