@@ -206,6 +206,24 @@
     });
   }
 
+  function createAvatarFallback(name) {
+    const fallback = document.createElement('div');
+    fallback.className = 'person-card__fallback';
+    fallback.setAttribute('aria-label', `Portrait photo unavailable for ${name}`);
+    
+    const initial = (name || '?').trim().charAt(0).toUpperCase();
+    fallback.innerHTML = `
+      <div class="fallback-avatar-wrapper">
+        <svg class="fallback-avatar-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        </svg>
+        <span class="fallback-avatar-initial">${initial}</span>
+      </div>
+    `;
+    return fallback;
+  }
+
   function createPersonCard(person) {
     const card = document.createElement('article');
     card.className = 'card person-card';
@@ -215,38 +233,68 @@
     const media = document.createElement('div');
     media.className = 'person-card__media';
 
-    const img = document.createElement('img');
-    img.id = `person-img-${person.id}`;
-    img.className = 'person-card__img';
-    img.src = `${person.image_url}?t=${encodeURIComponent(person.updated_at)}`;
-    img.alt = `Facial portrait of ${person.name}`;
-    img.loading = 'lazy';
-    img.addEventListener('error', function () {
-      img.alt = 'Photo unavailable';
-    });
-    media.appendChild(img);
+    if (person.has_image && person.image_url) {
+      const img = document.createElement('img');
+      img.id = `person-img-${person.id}`;
+      img.className = 'person-card__img';
+      img.src = `${person.image_url}?t=${encodeURIComponent(person.updated_at || Date.now())}`;
+      img.alt = `Facial portrait of ${person.name}`;
+      img.loading = 'lazy';
+      img.addEventListener('error', function () {
+        media.innerHTML = '';
+        media.appendChild(createAvatarFallback(person.name));
+      });
+      media.appendChild(img);
+    } else {
+      media.appendChild(createAvatarFallback(person.name));
+    }
 
     const body = document.createElement('div');
     body.className = 'person-card__body';
+
+    const header = document.createElement('div');
+    header.className = 'person-card__header';
 
     const title = document.createElement('h3');
     title.id = `person-name-${person.id}`;
     title.className = 'person-card__title';
     title.textContent = person.name;
+    header.appendChild(title);
+
+    if (person.has_embedding) {
+      const badge = document.createElement('span');
+      badge.className = 'person-card__badge';
+      badge.innerHTML = `<span class="status-dot status-dot--live" aria-hidden="true"></span>Active`;
+      header.appendChild(badge);
+    }
 
     const meta = document.createElement('div');
     meta.className = 'person-card__meta';
-    meta.innerHTML = `
-      <p><span>Registered:</span> ${formatDate(person.created_at)}</p>
-      <p><span>Updated:</span> ${formatDate(person.updated_at)}</p>
+
+    const regItem = document.createElement('div');
+    regItem.className = 'person-card__meta-item';
+    regItem.innerHTML = `
+      <span class="person-card__meta-label">Enrolled:</span>
+      <span class="person-card__meta-value">${formatDate(person.created_at)}</span>
     `;
+    meta.appendChild(regItem);
+
+    if (person.updated_at && person.updated_at !== person.created_at) {
+      const upItem = document.createElement('div');
+      upItem.className = 'person-card__meta-item';
+      upItem.innerHTML = `
+        <span class="person-card__meta-label">Updated:</span>
+        <span class="person-card__meta-value">${formatDate(person.updated_at)}</span>
+      `;
+      meta.appendChild(upItem);
+    }
 
     const actions = document.createElement('div');
     actions.className = 'person-card__actions';
 
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
-    editBtn.className = 'btn btn--small';
+    editBtn.className = 'btn btn--small btn--ghost';
     editBtn.textContent = 'Edit Name';
     editBtn.setAttribute('aria-label', `Edit name for ${person.name}`);
     editBtn.addEventListener('click', function () {
@@ -257,12 +305,12 @@
 
     const photoBtn = document.createElement('button');
     photoBtn.type = 'button';
-    photoBtn.className = 'btn btn--small';
+    photoBtn.className = 'btn btn--small btn--ghost';
     photoBtn.textContent = 'Change Photo';
     photoBtn.setAttribute('aria-label', `Change reference photo for ${person.name}`);
     photoBtn.addEventListener('click', function () {
       replacePersonId.value = person.id;
-      replacePersonNameDisplay.textContent = `For: ${person.name}`;
+      replacePersonNameDisplay.textContent = `Target profile: ${person.name}`;
       resetReplaceFileInput();
       openModal(replaceModal, replaceFileInput);
     });
@@ -282,7 +330,7 @@
     actions.appendChild(photoBtn);
     actions.appendChild(delBtn);
 
-    body.appendChild(title);
+    body.appendChild(header);
     body.appendChild(meta);
     body.appendChild(actions);
 
@@ -298,6 +346,14 @@
     searchDebounceTimer = setTimeout(function () {
       loadPeople(q);
     }, 250);
+  });
+
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(searchDebounceTimer);
+      loadPeople(searchInput.value.trim());
+    }
   });
 
   clearSearchBtn.addEventListener('click', function () {
@@ -321,10 +377,14 @@
     const name = editPersonName.value.trim();
 
     if (!name) {
-      alert('Please enter a valid name.');
+      showError('Please enter a valid person name.');
       editPersonName.focus();
       return;
     }
+
+    const saveNameBtn = document.getElementById('save-name-btn');
+    saveNameBtn.disabled = true;
+    saveNameBtn.textContent = 'Saving...';
 
     try {
       const resp = await fetch(`/api/persons/${id}`, {
@@ -336,13 +396,17 @@
 
       if (resp.status === 200 && data.status === 'ok') {
         closeModal();
-        showSuccess(`Updated name to "${data.person.name}".`);
+        showSuccess(`Updated profile name to "${data.person.name}".`);
         loadPeople(searchInput.value.trim());
       } else {
-        alert(data.error && data.error.message ? data.error.message : 'Failed to update name.');
+        const msg = data.error && data.error.message ? data.error.message : 'Failed to update name.';
+        showError(msg);
       }
     } catch {
-      alert('Network error. Could not update name.');
+      showError('Network error. Could not update name.');
+    } finally {
+      saveNameBtn.disabled = false;
+      saveNameBtn.textContent = 'Save Changes';
     }
   });
 
@@ -367,7 +431,7 @@
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size exceeds the 5 MB limit.');
+      showError('File size exceeds the 5 MB limit.');
       resetReplaceFileInput();
       return;
     }
@@ -387,7 +451,7 @@
     const file = replaceFileInput.files && replaceFileInput.files[0];
 
     if (!file) {
-      alert('Please choose an image file first.');
+      showError('Please choose an image file first.');
       replaceFileInput.focus();
       return;
     }
@@ -395,7 +459,7 @@
     const formData = new FormData();
     formData.append('image', file);
 
-    const submitBtn = replaceForm.querySelector('button[type="submit"]');
+    const submitBtn = document.getElementById('save-photo-btn');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Uploading...';
 
@@ -408,13 +472,14 @@
 
       if (resp.status === 200 && data.status === 'ok') {
         closeModal();
-        showSuccess(`Facial photo for "${data.person.name}" was replaced successfully.`);
+        showSuccess(`Facial photo for "${data.person.name}" was updated successfully.`);
         loadPeople(searchInput.value.trim());
       } else {
-        alert(data.error && data.error.message ? data.error.message : 'Photo upload failed.');
+        const msg = data.error && data.error.message ? data.error.message : 'Photo upload failed.';
+        showError(msg);
       }
     } catch {
-      alert('Network error. Could not replace photo.');
+      showError('Network error. Could not replace photo.');
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Update Photo';
@@ -436,13 +501,14 @@
 
       if (resp.status === 200 && data.status === 'ok') {
         closeModal();
-        showSuccess('Person profile and associated reference photos deleted.');
+        showSuccess('Person profile, biometric embeddings, and reference photos deleted.');
         loadPeople(searchInput.value.trim());
       } else {
-        alert(data.error && data.error.message ? data.error.message : 'Deletion failed.');
+        const msg = data.error && data.error.message ? data.error.message : 'Deletion failed.';
+        showError(msg);
       }
     } catch {
-      alert('Network error. Could not delete person.');
+      showError('Network error. Could not delete person.');
     } finally {
       confirmDeleteBtn.disabled = false;
       confirmDeleteBtn.textContent = 'Delete Permanently';

@@ -1302,44 +1302,118 @@ main:focus {
   font-size: 0.875rem;
 }
 
-/* State Cards */
+/* State Cards & Identity States */
 .state-card {
   text-align: center;
   padding: 3rem 1.5rem;
   background: var(--surface);
-  border: 1px dashed var(--line-strong);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   max-width: 36rem;
   margin: 1.5rem auto;
 }
 
+.state-loading-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0 auto 1.25rem;
+  border: 3px solid var(--line);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.state-icon-wrap {
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 1.25rem;
+  border-radius: 50%;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+
 .state-icon {
-  width: 3.5rem !important;
-  height: 3.5rem !important;
-  max-width: 3.5rem !important;
-  max-height: 3.5rem !important;
-  color: var(--muted);
-  margin: 0 auto 1rem auto;
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  max-width: 2.25rem !important;
+  max-height: 2.25rem !important;
+  color: var(--primary);
+  margin: 0 !important;
   display: block;
 }
 
 .state-card h3 {
   font-size: 1.25rem;
-  margin-bottom: 0.35rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--ink);
 }
 
 .state-card p {
-  margin: 0 auto 1rem auto;
+  margin: 0 auto 1.25rem;
   color: var(--muted);
   font-size: 0.9375rem;
+  line-height: 1.6;
 }
 
-/* Directory Grid & Cards */
+/* Identity Library Empty State */
+.identity-empty-state {
+  background: linear-gradient(180deg, var(--surface) 0%, rgba(14, 22, 40, 0.6) 100%);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius);
+  padding: 3.5rem 2rem;
+  max-width: 38rem;
+  margin: 2rem auto;
+}
+
+.identity-empty-state h3 {
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+}
+
+.identity-empty-state p {
+  max-width: 28rem;
+  margin: 0 auto 1.75rem;
+}
+
+.empty-state__action {
+  margin-top: 0.5rem;
+}
+
+/* Controls Bar Overrides */
+.library-controls {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.library-count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--stage);
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+/* Directory Grid & Identity Cards */
 .people-grid,
 .person-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(18.5rem, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
 }
 
 .person-card {
@@ -1349,23 +1423,25 @@ main:focus {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
 }
 
 .person-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(14, 165, 233, 0.4);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  transform: translateY(-3px);
+  border-color: rgba(14, 165, 233, 0.45);
+  box-shadow: 0 14px 32px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(14, 165, 233, 0.25);
 }
 
 .person-card__media {
   background: var(--stage);
-  height: 12rem;
+  height: 13.5rem;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  border-bottom: 1px solid var(--line);
 }
 
 .person-card__img {
@@ -1373,7 +1449,51 @@ main:focus {
   height: 100% !important;
   max-width: 100% !important;
   object-fit: cover !important;
+  object-position: center top !important;
   display: block;
+  transition: transform 0.3s ease;
+}
+
+.person-card:hover .person-card__img {
+  transform: scale(1.02);
+}
+
+.person-card__fallback {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, rgba(14, 165, 233, 0.08) 0%, var(--surface-raised) 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.fallback-avatar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fallback-avatar-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  color: var(--subtle);
+}
+
+.fallback-avatar-initial {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: -1rem;
 }
 
 .person-card__body {
@@ -1383,35 +1503,92 @@ main:focus {
   flex: 1;
 }
 
+.person-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .person-card__title {
-  font-size: 1.15rem;
-  margin: 0 0 0.35rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.3;
   word-break: break-word;
+}
+
+.person-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  flex-shrink: 0;
 }
 
 .person-card__meta {
   font-size: 0.8125rem;
   color: var(--muted);
-  margin-bottom: 1rem;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   flex: 1;
 }
 
-.person-card__meta p {
-  margin: 0 0 0.2rem;
+.person-card__meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-.person-card__meta span {
-  font-weight: 600;
+.person-card__meta-label {
+  color: var(--subtle);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.person-card__meta-value {
   color: var(--ink);
+  font-weight: 500;
 }
 
 .person-card__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding-top: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.45rem;
+  padding-top: 0.85rem;
   border-top: 1px solid var(--line);
   margin-top: auto;
+}
+
+.person-card__actions .btn {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8125rem;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+@media (max-width: 32rem) {
+  .people-grid,
+  .person-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .person-card__actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ==========================================================================
