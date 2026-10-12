@@ -42,17 +42,17 @@ def test_health_ok(client):
     body = resp.get_json()
     assert body["status"] == "ok"
     assert body["app"] == "AI Person Recognition"
-    assert body["phase"] == 3
+    assert body["phase"] == 4
     assert {"version", "timestamp", "python", "capabilities"} <= body.keys()
 
 
-def test_health_reports_phase3_capabilities(client):
+def test_health_reports_phase4_capabilities(client):
     caps = client.get("/api/health").get_json()["capabilities"]
     assert caps["camera_preview"] is True
     assert caps["database"] is True
     assert caps["face_detection"] is True
     assert caps["face_recognition"] is True
-    assert caps["expression_analysis"] is False
+    assert caps["expression_analysis"] is True
     assert caps["speech_feedback"] is False
 
 
@@ -99,7 +99,7 @@ def test_dashboard_navigation(client):
 
 def test_dashboard_is_honest_about_unavailable_features(client):
     html = client.get("/").get_data(as_text=True)
-    assert html.count("Not available yet") >= 2  # expression, speech
+    assert html.count("Not available yet") >= 1  # speech feedback (Phase 5)
     assert "Speech feedback" in html and "Recognition results" in html
 
 

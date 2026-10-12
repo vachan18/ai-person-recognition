@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 from flask import Blueprint, current_app, jsonify, request, send_file
 
+from app.services.expressions import ModelNotLoadedError as FERModelNotLoadedError
 from app.services.face_detector import ModelNotLoadedError
 from app.services.person_service import PersonService
 from app.services.recognition_service import RecognitionService
@@ -26,7 +27,7 @@ def _error_response(message: str, code: int = 400):
 
 @api_bp.get("/health")
 def health():
-    """Health check endpoint reporting system status and Phase 3 capabilities."""
+    """Health check endpoint reporting system status and Phase 4 capabilities."""
     return jsonify(
         {
             "status": "ok",
@@ -39,7 +40,7 @@ def health():
                 "camera_preview": True,
                 "face_detection": True,
                 "face_recognition": True,
-                "expression_analysis": False,
+                "expression_analysis": True,
                 "speech_feedback": False,
                 "database": True,
             },
@@ -207,7 +208,7 @@ def recognize():
     try:
         result = RecognitionService.recognize_faces(img_bgr)
         return jsonify(result), 200
-    except ModelNotLoadedError as err:
+    except (ModelNotLoadedError, FERModelNotLoadedError) as err:
         return _error_response(str(err), 503)
     except Exception as exc:
         current_app.logger.exception("Unexpected error during face recognition: %s", exc)

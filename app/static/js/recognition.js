@@ -16,6 +16,7 @@
   const resultSimilarity = document.getElementById('result-similarity');
   const resultFacesCount = document.getElementById('result-faces-count');
   const resultLatency = document.getElementById('result-latency');
+  const resultExpression = document.getElementById('result-expression');
   const announcement = document.getElementById('recognition-announcement');
 
   if (!recognizeBtn || !overlay) {
@@ -34,10 +35,11 @@
 
   function resetResults() {
     clearOverlay();
-    if (resultPerson) resultPerson.innerHTML = '<span class="badge badge--neutral">No face detected</span>';
+    if (resultPerson) resultPerson.innerHTML = '<span class="badge badge--neutral">No faces detected</span>';
     if (resultSimilarity) resultSimilarity.textContent = '—';
     if (resultFacesCount) resultFacesCount.textContent = '0';
     if (resultLatency) resultLatency.textContent = '—';
+    if (resultExpression) resultExpression.innerHTML = '<span class="badge badge--neutral">—</span>';
     if (announcement) announcement.textContent = 'Ready for face recognition.';
   }
 
@@ -88,16 +90,26 @@
       const box = face.box;
       const status = face.status;
       const name = face.name || 'Unknown';
-      const sim = face.similarity ? (face.similarity * 100).toFixed(1) + '%' : '';
+      const sim = face.similarity ? (face.similarity * 100).toFixed(0) + '%' : '';
+
+      // Expression descriptor
+      let exprSnippet = '';
+      if (face.expression && face.expression.status === 'classified' && face.expression.label) {
+        const exprName = face.expression.label.charAt(0).toUpperCase() + face.expression.label.slice(1);
+        const exprConf = (face.expression.confidence * 100).toFixed(0);
+        exprSnippet = ` | ${exprName} (${exprConf}%)`;
+      } else if (face.expression && face.expression.status === 'uncertain') {
+        exprSnippet = ' | Expr: Uncertain';
+      }
 
       let color = '#d13438'; // red for unknown
-      let label = 'Unknown';
+      let label = `Unknown${exprSnippet}`;
       if (status === 'recognized') {
         color = '#107c41'; // green for recognized
-        label = `${name} (${sim})`;
+        label = `${name} (${sim})${exprSnippet}`;
       } else if (status === 'uncertain') {
         color = '#d87a00'; // amber for uncertain
-        label = `Uncertain (${sim})`;
+        label = `Uncertain (${sim})${exprSnippet}`;
       }
 
       // 1. Draw Bounding Box
@@ -108,7 +120,7 @@
       overlayCtx.stroke();
 
       // 2. Draw Label Badge
-      const fontSize = Math.max(14, Math.round(imageWidth / 35));
+      const fontSize = Math.max(13, Math.round(imageWidth / 38));
       overlayCtx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
       const textWidth = overlayCtx.measureText(label).width;
       const pad = 6;
@@ -135,6 +147,7 @@
       clearOverlay();
       if (resultPerson) resultPerson.innerHTML = '<span class="badge badge--neutral">No faces detected</span>';
       if (resultSimilarity) resultSimilarity.textContent = '—';
+      if (resultExpression) resultExpression.innerHTML = '<span class="badge badge--neutral">—</span>';
       if (announcement) announcement.textContent = 'No faces detected in view.';
       return;
     }
@@ -166,6 +179,23 @@
       announcementText = `Detected ${unknownList.length} unknown face(s).`;
       if (resultSimilarity) {
         resultSimilarity.textContent = unknownList[0].similarity > 0 ? `${(unknownList[0].similarity * 100).toFixed(1)}%` : '—';
+      }
+    }
+
+    // Expression UI update
+    if (resultExpression && faces.length > 0) {
+      const primaryExpr = faces[0].expression;
+      if (primaryExpr && primaryExpr.status === 'classified' && primaryExpr.label) {
+        const exprName = primaryExpr.label.charAt(0).toUpperCase() + primaryExpr.label.slice(1);
+        const exprPct = (primaryExpr.confidence * 100).toFixed(0);
+        resultExpression.innerHTML = `<span class="badge badge--success">${exprName} (${exprPct}%)</span>`;
+        announcementText += ` Showing ${primaryExpr.label} expression.`;
+      } else if (primaryExpr && primaryExpr.status === 'uncertain') {
+        const candidate = primaryExpr.candidate ? ` (${primaryExpr.candidate})` : '';
+        resultExpression.innerHTML = `<span class="badge badge--warning">Uncertain${candidate}</span>`;
+        announcementText += ' Showing uncertain expression.';
+      } else {
+        resultExpression.innerHTML = '<span class="badge badge--neutral">Unusable crop</span>';
       }
     }
 

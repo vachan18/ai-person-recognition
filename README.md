@@ -4,13 +4,14 @@ An assistive web app, in development, that will tell visually impaired users who
 front of the camera and what facial expression they show, using spoken announcements.
 Everything runs locally on your computer.
 
-**Current status: Phase 3 (AI Face Detection and Person Recognition).**
+**Current status: Phase 4 (Facial Expression Classification).**
 The Flask backend provides an accessible dashboard, webcam preview, local SQLite database layer,
 person registration with image validation, profile management, and a local computer vision pipeline.
-Face detection is powered by **OpenCV Zoo YuNet**, and identity recognition feature extraction is powered by **OpenCV Zoo SFace**.
-Facial expression analysis and speech feedback are **not implemented yet** (scheduled for Phase 4 and Phase 5).
+Face detection is powered by **OpenCV Zoo YuNet**, identity recognition feature extraction is powered by **OpenCV Zoo SFace**,
+and facial expression classification is powered by **OpenCV Zoo MobileFaceNet (Progressive Teacher)**.
+Speech feedback is **not implemented yet** (scheduled for Phase 5).
 
-## AI Models and Recognition Pipeline (Phase 3)
+## AI Models and Pipeline (Phase 3 & Phase 4)
 
 1. **Face Detection (YuNet):**
    - Model: `face_detection_yunet_2023mar.onnx` via OpenCV's `cv2.FaceDetectorYN`.
@@ -20,20 +21,32 @@ Facial expression analysis and speech feedback are **not implemented yet** (sche
    - Model: `face_recognition_sface_2021dec.onnx` via OpenCV's `cv2.FaceRecognizerSF`.
    - Aligns detected face crops using 5 landmarks and extracts 128-dimensional L2-normalized feature vectors.
    - Embeddings are validated for numerical integrity (finite float32 values, no NaNs/Infs).
-3. **Database Integration & Persistence:**
-   - On person registration (`POST /api/persons`) or photo replacement (`POST /api/persons/<id>/image`), the system verifies that exactly one face is visible, extracts the embedding, and stores it in the `face_embeddings` table.
-   - Embeddings are linked via foreign keys to `persons` and cascade-deleted on profile deletion.
-4. **Matching & Threshold Calibration:**
-   - Feature comparison is performed using cosine similarity via OpenCV (`FaceRecognizerSF_FR_COSINE`).
-   - Default matching threshold is **`0.363`** (the official SFace benchmark threshold).
-   - Cosine similarity $\ge 0.363$: **Recognized** (reports person ID and name).
-   - Cosine similarity between $0.300$ and $0.363$: **Uncertain** (treated conservatively).
-   - Cosine similarity $< 0.300$: **Unknown**.
-   - *Threshold Calibration:* In real-world environments, optimal thresholds depend on lighting conditions, camera resolution, and angles. You can adjust `RECOGNITION_COSINE_THRESHOLD` in your `.env` file to balance False Acceptance Rate (FAR) and False Rejection Rate (FRR) using known-person and unknown-person evaluation images.
+3. **Database Integration & Identity Matching:**
+   - Embeddings stored as raw binary BLOBs in SQLite `face_embeddings` table with cascade deletion.
+   - Matching uses cosine similarity via OpenCV (`FaceRecognizerSF_FR_COSINE`).
+   - SFace cosine similarity $\ge 0.363$: **Recognized**.
+   - SFace cosine similarity between $0.300$ and $0.363$: **Uncertain**.
+   - SFace cosine similarity $< 0.300$: **Unknown**.
+4. **Facial Expression Classification (MobileFaceNet):**
+   - Model: `facial_expression_recognition_mobilefacenet_2022july.onnx` (4.79 MB, ONNX format, Apache 2.0 license).
+   - Source: OpenCV Zoo (`opencv/facial_expression_recognition`) based on Progressive Teacher (Jiang et al., 2021, trained on RAF-DB with 88.27% accuracy).
+   - Supported categories (7 basic expressions): **`angry`**, **`disgust`**, **`fearful`**, **`happy`**, **`neutral`**, **`sad`**, and **`surprised`**.
+   - Input Preprocessing:
+     - 5-point facial landmark alignment via similarity affine transformation (`cv2.estimateAffinePartial2D`) to standard `(112, 112)` anchor coordinates, with fallback to box crop.
+     - Color space converted from BGR to RGB.
+     - Standardized to float32 normalized tensor with mean `0.5` and std `0.5`: `(x / 255.0 - 0.5) / 0.5`.
+     - 4D Blob input passed through OpenCV's native DNN engine (`cv2.dnn.readNetFromONNX`).
+   - Confidence & Calibration:
+     - Output logits converted to calibrated probabilities via Softmax: $P(c) = \frac{e^{z_c}}{\sum_k e^{z_k}}$.
+     - Threshold: If top probability $< 0.45$, status is flagged as `"uncertain"` to avoid false overconfidence.
+     - Degraded or tiny face crops (< 24 px) are flagged as `"unusable"`.
+   - Pipeline Independence:
+     - Expression classification is executed completely independently of identity matching. Identity similarity scores are never used as expression confidence scores.
+     - Probabilistic nature: Visible expressions are presented as visual cues rather than definitive psychological ground truth.
 
-## Privacy and Security in Phase 3
+## Privacy and Security in Phase 4
 
-- **100% Local Inference:** Face detection and recognition models execute locally using OpenCV on this computer. Video frames and facial crops are never sent to external AI APIs or cloud servers.
+- **100% Local Inference:** Face detection, recognition, and expression classification execute entirely locally using OpenCV on this computer. Video frames and facial crops are never transmitted to external AI APIs or cloud servers.
 - **Biometric Notice & Consent:** Facial reference images are sensitive biometric data. The Register Person interface requires explicit confirmation of consent before storing reference photos.
 - **Protected File Access:** Uploaded facial photos are stored outside `static/` (default `data/faces/`) and served strictly through application routes with `Cache-Control: private, no-store`.
 - **Model Storage Safety:** Model ONNX files are placed in `models/` and are excluded from version control via `.gitignore`.

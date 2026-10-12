@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 from flask import current_app
 
+from app.services.expressions import ExpressionClassifier, get_expression_classifier
 from app.services.face_detector import FaceDetector, get_face_detector
 from app.services.face_recognizer import FaceRecognizer, get_face_recognizer
 from app.services.person_service import PersonService
@@ -14,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 class RecognitionService:
-    """Orchestrates face detection and identity recognition matching."""
+    """Orchestrates face detection, identity recognition, and expression analysis."""
 
     @classmethod
     def recognize_faces(
@@ -23,10 +24,11 @@ class RecognitionService:
         cosine_threshold: Optional[float] = None,
         uncertain_threshold: Optional[float] = None,
     ) -> Dict[str, Any]:
-        """Detect all faces in image_bgr and match each against registered persons.
+        """Detect all faces in image_bgr, match each against registered persons,
+        and classify visible facial expressions.
 
         Returns a structured dictionary with detected faces, matching identities,
-        similarities, bounding boxes, and processing duration.
+        expression categories, similarities, bounding boxes, and processing duration.
         """
         start_time = time.perf_counter()
 
@@ -37,6 +39,7 @@ class RecognitionService:
 
         detector = get_face_detector()
         recognizer = get_face_recognizer()
+        exp_classifier = get_expression_classifier()
 
         # 1. Detect all faces in frame
         detected_faces = detector.detect_faces(image_bgr)
@@ -60,7 +63,24 @@ class RecognitionService:
             box = face_info["box"]
             detect_confidence = face_info["confidence"]
             raw_face = face_info["raw_face"]
+            landmarks = face_info.get("landmarks")
 
+            # A. Independent facial expression classification
+            try:
+                expression_info = exp_classifier.classify_face(
+                    image_bgr, landmarks=landmarks, box=box
+                )
+            except Exception as exc:
+                log.warning("Expression classification error: %s", exc)
+                expression_info = {
+                    "status": "unusable",
+                    "label": "unusable",
+                    "confidence": 0.0,
+                    "scores": {},
+                    "warning": "Expression classification failed.",
+                }
+
+            # B. Independent identity feature extraction and matching
             try:
                 probe_embedding = recognizer.extract_feature(image_bgr, raw_face)
             except Exception as exc:
@@ -73,6 +93,7 @@ class RecognitionService:
                         "person_id": None,
                         "name": "Unknown",
                         "similarity": 0.0,
+                        "expression": expression_info,
                         "warning": "Could not align face for recognition.",
                     }
                 )
@@ -117,6 +138,7 @@ class RecognitionService:
                     "person_id": matched_id,
                     "name": matched_name,
                     "similarity": sim_rounded,
+                    "expression": expression_info,
                 }
             )
 
