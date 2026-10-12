@@ -1,11 +1,29 @@
 {% extends "base.html" %}
-{% block title %}Register Person{% endblock %}
+{% block title %}Register Person &bull; Biometric Enrollment Studio{% endblock %}
 
 {% block content %}
-<div class="page page--narrow">
-  <header class="page-header">
-    <h1>Register Person</h1>
-    <p class="lead">Add a new person to the local directory with their name and facial reference photo.</p>
+<div class="page enrollment-studio">
+  <!-- Enrollment Header -->
+  <header class="command-header">
+    <div class="command-header__intro">
+      <div class="command-tag">
+        <span class="command-tag__dot" aria-hidden="true"></span>
+        <span>Biometric Enrollment Studio</span>
+      </div>
+      <h1 id="page-title">Register Person</h1>
+      <p class="lead">
+        Enroll a new person into your local directory with their name, explicit biometric consent, and a reference facial portrait.
+      </p>
+    </div>
+    <div class="command-header__meta">
+      <div class="system-readiness-card">
+        <div class="system-readiness-card__header">
+          <span class="system-readiness-card__title">Local Storage</span>
+          <span class="badge badge--success">Private</span>
+        </div>
+        <p class="system-readiness-card__desc">Stored locally on this computer. Features extracted into SQLite database offline.</p>
+      </div>
+    </div>
   </header>
 
   <!-- Privacy & Biometric Notice -->
@@ -40,39 +58,88 @@
     </div>
   </div>
 
-  <section class="card" aria-labelledby="form-heading">
-    <h2 id="form-heading" class="visually-hidden">Registration Form</h2>
-    
-    <form id="register-form" novalidate enctype="multipart/form-data">
-      <!-- Person Name Input -->
-      <div class="form-group">
-        <label for="person-name" class="form-label">
-          Full Name <span class="required" aria-hidden="true">*</span>
-        </label>
-        <input 
-          type="text" 
-          id="person-name" 
-          name="name" 
-          class="form-input" 
-          required 
-          maxlength="100" 
-          autocomplete="off" 
-          aria-describedby="name-hint"
-          placeholder="e.g. Jane Doe"
-        />
-        <p id="name-hint" class="form-hint">Enter the person's name as you would like spoken announcements to say it.</p>
-      </div>
+  <!-- Enrollment Studio 2-Column Form -->
+  <form id="register-form" novalidate enctype="multipart/form-data">
+    <div class="enrollment-grid">
+      <!-- Left Column: Person Details & Consent -->
+      <section class="card enrollment-card" aria-labelledby="identity-heading">
+        <div class="panel-header">
+          <div class="panel-header__title-group">
+            <h2 id="identity-heading" class="panel-title">Person Details</h2>
+            <span class="panel-subtitle">Identity &amp; Authorization</span>
+          </div>
+          <span class="badge badge--neutral">Step 1 of 2</span>
+        </div>
 
-      <!-- Facial Photo Upload -->
-      <div class="form-group">
-        <label for="person-image" class="form-label">
-          Facial Reference Photo <span class="required" aria-hidden="true">*</span>
-        </label>
-        <p id="image-hint" class="form-hint">
-          Supported formats: JPEG, PNG, WEBP. Maximum file size: 5 MB. A clear, well-lit, frontal portrait works best.
+        <!-- Full Name Field -->
+        <div class="form-group">
+          <label for="person-name" class="form-label">
+            Full Name <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="person-name" 
+            name="name" 
+            class="form-input" 
+            required 
+            maxlength="100" 
+            autocomplete="off" 
+            aria-describedby="name-hint"
+            placeholder="e.g. Jane Doe"
+          />
+          <p id="name-hint" class="form-hint">
+            Spoken announcements will use this exact name when this person is recognized in front of the camera.
+          </p>
+        </div>
+
+        <!-- Biometric Consent Checkbox -->
+        <div class="form-group consent-group">
+          <label class="checkbox-label" for="consent-checkbox">
+            <input 
+              type="checkbox" 
+              id="consent-checkbox" 
+              name="consent" 
+              class="checkbox-input" 
+              required 
+              aria-describedby="consent-hint"
+            />
+            <span class="checkbox-text">
+              <strong>Consent confirmation:</strong> I confirm that I have obtained explicit permission and consent from this person to store and process their facial image on this device. <span class="required" aria-hidden="true">*</span>
+            </span>
+          </label>
+          <p id="consent-hint" class="form-hint">
+            Confirmation is required by privacy regulations prior to registering biometric reference data.
+          </p>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions enrollment-actions">
+          <button type="submit" id="submit-btn" class="btn btn--primary btn--large" disabled>
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+            <span id="submit-btn-text">Register Person</span>
+          </button>
+          <a href="{{ url_for('pages.manage_people') }}" class="btn btn--large btn--ghost">Cancel</a>
+        </div>
+      </section>
+
+      <!-- Right Column: Facial Photo Upload & Preview -->
+      <section class="card enrollment-card" aria-labelledby="photo-heading">
+        <div class="panel-header">
+          <div class="panel-header__title-group">
+            <h2 id="photo-heading" class="panel-title">Facial Photo</h2>
+            <span class="panel-subtitle">Reference Portrait</span>
+          </div>
+          <span class="badge badge--neutral">Step 2 of 2</span>
+        </div>
+
+        <p id="image-hint" class="form-hint form-hint--photo">
+          A clear, well-lit, frontal portrait with exactly one visible face works best for facial recognition.
         </p>
 
-        <div class="upload-area" id="upload-dropzone">
+        <!-- Drag & Drop Upload Dropzone -->
+        <div class="upload-dropzone" id="upload-dropzone">
           <input 
             type="file" 
             id="person-image" 
@@ -82,55 +149,56 @@
             required 
             aria-describedby="image-hint"
           />
-          <label for="person-image" class="upload-trigger-btn btn">
-            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Choose image file
-          </label>
-          <span id="chosen-filename" class="file-name-display">No file selected</span>
+          <div class="dropzone-content" id="dropzone-prompt">
+            <div class="dropzone-icon-wrap" aria-hidden="true">
+              <svg class="dropzone-icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+                <circle cx="24" cy="18" r="8" fill="none" stroke="currentColor" stroke-width="2.5"/>
+                <path d="M10 40c0-7 6.2-12 14-12s14 5 14 12" fill="none" stroke="currentColor" stroke-width="2.5"/>
+                <path d="M38 14v10M33 19h10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <p class="dropzone-title">Drag and drop facial portrait here</p>
+            <p class="dropzone-subtitle">or choose a file from your computer</p>
+            <label for="person-image" class="upload-trigger-btn btn btn--primary">
+              <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Browse image file
+            </label>
+            <span id="chosen-filename" class="file-name-display">No file selected</span>
+          </div>
+
+          <!-- Selected Image Preview Card -->
+          <div id="preview-container" class="preview-card enrollment-preview" hidden>
+            <div class="preview-thumbnail enrollment-preview__thumb">
+              <img id="image-preview" src="" alt="Selected portrait preview" />
+            </div>
+            <div class="preview-details enrollment-preview__details">
+              <div class="preview-badge-row">
+                <span class="badge badge--success">Image selected</span>
+              </div>
+              <p id="preview-filename" class="preview-name"></p>
+              <p id="preview-meta" class="preview-meta"></p>
+              <div class="preview-actions">
+                <label for="person-image" class="btn btn--small btn--ghost">Change file</label>
+                <button type="button" id="remove-preview-btn" class="btn btn--small btn--danger">Remove</button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Preview Container -->
-        <div id="preview-container" class="preview-card" hidden>
-          <div class="preview-thumbnail">
-            <img id="image-preview" src="" alt="Selected portrait preview" />
-          </div>
-          <div class="preview-details">
-            <p id="preview-filename" class="preview-name"></p>
-            <p id="preview-meta" class="preview-meta"></p>
-            <button type="button" id="remove-preview-btn" class="btn btn--small btn--ghost">Remove</button>
-          </div>
+        <!-- Format & Specs Guidance Box -->
+        <div class="specs-box">
+          <span class="specs-box__title">Format &amp; Validation Requirements:</span>
+          <ul class="specs-list">
+            <li><strong>Formats:</strong> JPEG, PNG, WEBP (validated for decodability).</li>
+            <li><strong>File Size:</strong> Maximum 5 MB per image.</li>
+            <li><strong>Face Detection:</strong> Exactly one face must be visible (YuNet detection verified on submit).</li>
+          </ul>
         </div>
-      </div>
-
-      <!-- Biometric Consent Checkbox -->
-      <div class="form-group consent-group">
-        <label class="checkbox-label" for="consent-checkbox">
-          <input 
-            type="checkbox" 
-            id="consent-checkbox" 
-            name="consent" 
-            class="checkbox-input" 
-            required 
-            aria-describedby="consent-hint"
-          />
-          <span class="checkbox-text">
-            <strong>Consent confirmation:</strong> I confirm that I have obtained explicit permission and consent from this person to store and process their facial image on this device. <span class="required" aria-hidden="true">*</span>
-          </span>
-        </label>
-        <p id="consent-hint" class="form-hint">Confirmation is required by privacy regulations prior to registering biometric reference data.</p>
-      </div>
-
-      <!-- Actions -->
-      <div class="form-actions">
-        <button type="submit" id="submit-btn" class="btn btn--primary btn--large">
-          <span id="submit-btn-text">Register Person</span>
-        </button>
-        <a href="{{ url_for('pages.manage_people') }}" class="btn btn--large">Cancel</a>
-      </div>
-    </form>
-  </section>
+      </section>
+    </div>
+  </form>
 </div>
 {% endblock %}
 
