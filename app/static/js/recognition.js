@@ -22,6 +22,12 @@
   const resultExpression = document.getElementById('result-expression');
   const announcement = document.getElementById('recognition-announcement');
 
+  // Phase 6 Status & Breakdown elements
+  const recognitionModeBadge = document.getElementById('recognition-mode-badge');
+  const processingIndicator = document.getElementById('processing-indicator');
+  const facesDetailContainer = document.getElementById('faces-detail-container');
+  const facesDetailList = document.getElementById('faces-detail-list');
+
   // Voice Feedback elements (Phase 5)
   const speechStatusBadge = document.getElementById('speech-status-badge');
   const latestAnnouncementText = document.getElementById('latest-announcement-text');
@@ -37,6 +43,8 @@
 
   // State variables
   let isProcessing = false;
+  let activeRequestId = 0;
+  let activeAbortController = null;
   let liveInterval = null;
   let isSpeechMuted = false;
   let lastSpokenMessage = '';
@@ -69,6 +77,8 @@
     if (resultFacesCount) resultFacesCount.textContent = '0';
     if (resultLatency) resultLatency.textContent = '—';
     if (resultExpression) resultExpression.innerHTML = '<span class="badge badge--neutral">—</span>';
+    if (facesDetailContainer) facesDetailContainer.hidden = true;
+    if (facesDetailList) facesDetailList.innerHTML = '';
     if (announcement) announcement.textContent = 'Ready for face recognition.';
     previousPeopleInScene = [];
   }
@@ -84,8 +94,16 @@
       resetResults();
       overlay.hidden = true;
       cancelSpeech();
+      if (recognitionModeBadge) {
+        recognitionModeBadge.className = 'badge badge--neutral';
+        recognitionModeBadge.textContent = 'Camera off';
+      }
     } else {
       overlay.hidden = false;
+      if (recognitionModeBadge && !liveToggle.checked) {
+        recognitionModeBadge.className = 'badge badge--neutral';
+        recognitionModeBadge.textContent = 'Recognition idle';
+      }
     }
   }
 
@@ -334,6 +352,8 @@
       if (resultPerson) resultPerson.innerHTML = '<span class="badge badge--neutral">No faces detected</span>';
       if (resultSimilarity) resultSimilarity.textContent = '—';
       if (resultExpression) resultExpression.innerHTML = '<span class="badge badge--neutral">—</span>';
+      if (facesDetailContainer) facesDetailContainer.hidden = true;
+      if (facesDetailList) facesDetailList.innerHTML = '';
       processSpeechPolicy(data);
       return;
     }
@@ -382,24 +402,86 @@
       resultPerson.innerHTML = personHtml;
     }
 
+    // Phase 6: Multi-face detailed breakdown cards
+    if (facesDetailContainer && facesDetailList) {
+      facesDetailContainer.hidden = false;
+      facesDetailList.innerHTML = faces.map(function (face, idx) {
+        let statusBadge = '';
+        if (face.status === 'recognized') {
+          const sim = face.similarity ? ` (${(face.similarity * 100).toFixed(1)}%)` : '';
+          statusBadge = `<span class="badge badge--success">Recognized: ${face.name || 'Person'}${sim}</span>`;
+        } else if (face.status === 'uncertain') {
+          const sim = face.similarity ? ` (${(face.similarity * 100).toFixed(1)}%)` : '';
+          statusBadge = `<span class="badge badge--warning">Uncertain match${sim}</span>`;
+        } else {
+          statusBadge = `<span class="badge badge--danger">Unknown person</span>`;
+        }
+
+        let exprBadge = '';
+        if (face.expression && face.expression.status === 'classified' && face.expression.label) {
+          const exprName = face.expression.label.charAt(0).toUpperCase() + face.expression.label.slice(1);
+          const exprPct = (face.expression.confidence * 100).toFixed(0);
+          exprBadge = `<span class="badge badge--success">${exprName} (${exprPct}%)</span>`;
+        } else if (face.expression && face.expression.status === 'uncertain') {
+          exprBadge = `<span class="badge badge--warning">Expression uncertain</span>`;
+        } else {
+          exprBadge = `<span class="badge badge--neutral">Expression unclassified</span>`;
+        }
+
+        const box = face.box || {};
+        const boxLabel = box.width ? `<span class="text-muted" style="margin-left: 0.5rem; font-size: 0.8125rem;">${box.width}×${box.height}px</span>` : '';
+
+        return `<div class="face-detail-card">
+          <div class="face-detail-card__identity">
+            <span>Face #${idx + 1}: </span>
+            ${statusBadge}
+            ${boxLabel}
+          </div>
+          <div class="face-detail-card__expression">
+            ${exprBadge}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
     // Dispatch announcement policy
     processSpeechPolicy(data);
   }
 
-  // Single-flight network request with backpressure
+  // Single-flight network request with backpressure and stale cancellation
   async function performRecognition(imageDataUrl, originalWidth, originalHeight) {
     if (isProcessing) return;
     isProcessing = true;
     recognizeBtn.disabled = true;
+
+    if (processingIndicator) {
+      processingIndicator.hidden = false;
+    }
+
+    // Abort previous in-flight request if any
+    if (activeAbortController) {
+      try {
+        activeAbortController.abort();
+      } catch (e) {}
+    }
+    const abortController = new AbortController();
+    activeAbortController = abortController;
+    const reqId = ++activeRequestId;
 
     try {
       const resp = await fetch('/api/recognize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: imageDataUrl }),
+        signal: abortController.signal,
       });
 
       const data = await resp.json();
+
+      // Guard against stale response if another request was triggered
+      if (reqId !== activeRequestId) {
+        return;
+      }
 
       if (resp.status === 200 && data.status === 'ok') {
         updateResultsUI(data);
@@ -409,11 +491,21 @@
         if (announcement) announcement.textContent = `Error: ${errorMsg}`;
       }
     } catch (err) {
-      if (announcement) announcement.textContent = 'Network or server error during recognition.';
+      if (err.name === 'AbortError') {
+        return; // Normal cancellation
+      }
+      if (reqId === activeRequestId) {
+        if (announcement) announcement.textContent = 'Network or server error during recognition.';
+      }
     } finally {
-      isProcessing = false;
-      const isCameraOn = cameraStatus && cameraStatus.getAttribute('data-state') === 'on';
-      recognizeBtn.disabled = !isCameraOn;
+      if (reqId === activeRequestId) {
+        isProcessing = false;
+        if (processingIndicator) {
+          processingIndicator.hidden = true;
+        }
+        const isCameraOn = cameraStatus && cameraStatus.getAttribute('data-state') === 'on';
+        recognizeBtn.disabled = !isCameraOn;
+      }
     }
   }
 
@@ -428,6 +520,10 @@
 
   function startLiveRecognition() {
     if (liveInterval) clearInterval(liveInterval);
+    if (recognitionModeBadge) {
+      recognitionModeBadge.className = 'badge badge--success';
+      recognitionModeBadge.textContent = 'Continuous active (1.2s)';
+    }
     onRecognizeClick();
     // Controlled, measured 1200ms processing loop with single-flight backpressure
     liveInterval = setInterval(function () {
@@ -444,6 +540,22 @@
     if (liveInterval) {
       clearInterval(liveInterval);
       liveInterval = null;
+    }
+    if (activeAbortController) {
+      try {
+        activeAbortController.abort();
+      } catch (e) {}
+      activeAbortController = null;
+    }
+    activeRequestId++;
+    isProcessing = false;
+    if (processingIndicator) {
+      processingIndicator.hidden = true;
+    }
+    const isCameraOn = cameraStatus && cameraStatus.getAttribute('data-state') === 'on';
+    if (recognitionModeBadge) {
+      recognitionModeBadge.className = 'badge badge--neutral';
+      recognitionModeBadge.textContent = isCameraOn ? 'Recognition idle' : 'Camera off';
     }
     cancelSpeech();
   }

@@ -4,13 +4,15 @@ An assistive web app, in development, that will tell visually impaired users who
 front of the camera and what facial expression they show, using spoken announcements.
 Everything runs locally on your computer.
 
-**Current status: Phase 5 (Live Recognition and Voice Feedback).**
+**Current status: Phase 6 (UI/UX Refinement, Accessibility, and Reliability).**
 The Flask backend provides an accessible dashboard, webcam preview, local SQLite database layer,
 person registration with image validation, profile management, a local computer vision pipeline,
-and spoken audio feedback via browser Web Speech Synthesis.
+spoken audio feedback via browser Web Speech Synthesis, and polished accessibility features.
 Face detection is powered by **OpenCV Zoo YuNet**, identity recognition feature extraction is powered by **OpenCV Zoo SFace**,
 facial expression classification is powered by **OpenCV Zoo MobileFaceNet (Progressive Teacher)**,
 and voice feedback is delivered through client-side **Web Speech Synthesis** (`SpeechSynthesisUtterance`).
+Phase 6 refines the interface with multi-face breakdown cards, request cancellation via `AbortController`,
+stale response guards, real-time mode and processing indicators, and WCAG AA accessibility compliance.
 
 ## AI Models and Pipeline (Phases 3, 4 & 5)
 
@@ -64,8 +66,13 @@ and voice feedback is delivered through client-side **Web Speech Synthesis** (`S
      - **Speech rate** selector (0.8x, 1.0x, 1.2x, 1.5x).
      - **Cooldown** selector (4s, 6s, 10s).
      - Stopping recognition or camera immediately cancels queued and in-flight browser speech.
+6. **UI/UX Refinement, Accessibility, and Reliability (Phase 6):**
+   - **Multi-Face Breakdown Cards:** Detailed card list showing each detected face's individual identity match badge, bounding box dimensions/coordinates, and facial expression analysis side-by-side.
+   - **Request Cancellation & Anti-Stale Guards:** Using `AbortController` to cancel in-flight HTTP recognition requests upon stopping continuous mode or camera shutdown; sequential `activeRequestId` prevents delayed or out-of-order promise resolutions from updating the UI.
+   - **State & Processing Indicators:** Real-time `#recognition-mode-badge` showing `Camera off`, `Recognition idle`, or `Continuous active (1.2s)`, and `#processing-indicator` indicating frame inference in progress.
+   - **WCAG Accessibility Refinements:** Clean keyboard navigation, polite ARIA live regions (`aria-live="polite"`), high contrast badges, accessible button labels, and reduced-motion compliant CSS.
 
-## Privacy, Safety and Accessibility in Phase 5
+## Privacy, Safety and Accessibility in Phase 6
 
 - **100% Local Inference & Speech:** All computer vision models run locally on CPU via OpenCV, and speech synthesis runs directly in the client browser. No video frames, facial embeddings, or audio data are transmitted to external servers.
 - **Biometric Notice & Consent:** Facial reference images are sensitive biometric data. The Register Person interface requires explicit confirmation of consent before storing reference photos.

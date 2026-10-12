@@ -11,7 +11,7 @@
     </p>
     <p class="notice">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      <span><strong>Phase 5 active.</strong> Live face recognition and spoken announcements are running locally. Use the controls below to start camera recognition, mute voice, adjust speech rate, or repeat announcements.</span>
+      <span><strong>Phase 6 active.</strong> Accessible live recognition, facial expression analysis, and spoken announcements are running locally. Use the controls below to start camera recognition, mute voice, adjust speech rate, or repeat announcements.</span>
     </p>
   </section>
 
@@ -56,8 +56,10 @@
           </button>
           <label class="toggle-control" for="live-recognition-toggle">
             <input type="checkbox" id="live-recognition-toggle" class="toggle-checkbox" disabled />
-            <span>Continuous mode (1s)</span>
+            <span>Continuous mode (1.2s)</span>
           </label>
+          <span id="recognition-mode-badge" class="badge badge--neutral">Recognition idle</span>
+          <span id="processing-indicator" class="processing-indicator" hidden role="status" aria-live="polite">Analyzing frame...</span>
         </div>
 
         <div class="recognition-bar__upload">
@@ -97,6 +99,13 @@
             <dd id="result-expression"><span class="badge badge--neutral">—</span></dd>
           </div>
         </dl>
+        
+        <!-- Multi-Face Detailed Breakdown -->
+        <div id="faces-detail-container" class="faces-detail-container" hidden>
+          <h3 class="faces-detail-heading">Detected Faces Breakdown</h3>
+          <div id="faces-detail-list" class="faces-detail-list"></div>
+        </div>
+
         <p class="hint">Start camera and select <strong>Recognize Face</strong> or enable continuous mode. SFace cosine threshold: &ge; 0.363.</p>
       </section>
 
